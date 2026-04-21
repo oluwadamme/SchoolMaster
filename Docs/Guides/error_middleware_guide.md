@@ -5,32 +5,32 @@
 Look at your `AuthController`. Every single endpoint has this **exact same pattern**:
 
 ```csharp
-[HttpPost("register")]
-public async Task<ActionResult<BaseResponse<UserDto>>> RegisterUser(RegisterRequest request)
+[HttpPost("login")]
+public async Task<ActionResult<BaseResponse<AuthResponse>>> Login(LoginRequest request)
 {
     try
     {
         // ← 1-2 lines of actual logic
-        var user = await authService.RegisterUserAsync(request);
-        return Ok(BaseResponse<UserDto>.SuccessResponse("User registered successfully", user));
+        var response = await authService.LoginAsync(request);
+        return Ok(BaseResponse<AuthResponse>.SuccessResponse("Login successful", response));
     }
     catch (ArgumentException e)         // ← repeated in EVERY endpoint
     {
-        return BadRequest(BaseResponse<UserDto>.ErrorResponse(e.Message));
+        return BadRequest(BaseResponse<AuthResponse>.ErrorResponse(e.Message));
     }
     catch (Exception e)                 // ← repeated in EVERY endpoint
     {
-        logger.LogError(e, "An error occurred while registering the user");
-        return StatusCode(500, BaseResponse<UserDto>.ErrorResponse("An error occurred..."));
+        logger.LogError(e, "An error occurred while logging in");
+        return StatusCode(500, BaseResponse<AuthResponse>.ErrorResponse("An error occurred..."));
     }
 }
 ```
 
 Count your try/catch blocks:
-- **AuthController**: 7 endpoints × 3 catch blocks = **21 lines of repeated error handling**
-- **BooksController**: 5 endpoints × 2 catch blocks = **10 lines of repeated error handling**
+- **AuthController**: 8 endpoints × 3 catch blocks = **24 lines of repeated error handling**
+- **StudentsController**: 8 endpoints × 2 catch blocks = **16 lines of repeated error handling**
 
-That's **~31 lines** of copy-pasted code doing the same thing: *"if this exception type, return this status code."*
+That's **~40 lines** of copy-pasted code doing the same thing: *"if this exception type, return this status code."*
 
 ## What Is Middleware?
 
@@ -84,9 +84,9 @@ Returns { success: false, message: "..." } with status 400
 // Middleware/ExceptionMiddleware.cs
 using System.Net;
 using System.Text.Json;
-using FirstApi.DTOs;
+using SchoolMaster.Application.DTOs;
 
-namespace FirstApi.Middleware;
+namespace SchoolMaster.Api.Middleware;
 
 public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
 {

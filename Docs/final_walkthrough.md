@@ -1,6 +1,6 @@
 # Project Progress Walkthrough - Final Phase
 
-This phase finalized the production-readiness of the **FirstApi** by implementing enterprise-grade logging and completing the testing infrastructure.
+This phase finalized the production-readiness of the **SchoolMaster** by implementing enterprise-grade logging and completing the testing infrastructure.
 
 ## 1. Structured Logging with Serilog
 We replaced the standard .NET logger with **Serilog**, transforming your logs from plain text into queryable JSON objects.
@@ -28,4 +28,4 @@ We verified the entire application using both **Unit Tests** (xUnit/Moq) and **I
 
 ---
 
-Your **FirstApi** is now a high-performance, fully verified .NET 10 Web API!
+Your **SchoolMaster** is now a high-performance, fully verified .NET 10 Web API!

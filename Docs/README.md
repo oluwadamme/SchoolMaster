@@ -1,6 +1,6 @@
-# FirstApi Documentation Index
+# SchoolMaster Documentation Index
 
-This directory contains master guides and architectural documentation for the FirstApi project.
+This directory contains master guides and architectural documentation for the SchoolMaster project.
 
 ## 🏗 Core Architecture
 - [Clean Architecture Deep Dive](Guides/clean_architecture_guide.md)
