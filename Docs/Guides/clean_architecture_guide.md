@@ -85,51 +85,56 @@ If you were to rewrite your current `SchoolMaster` repository into Clean Archite
 SchoolMaster.Solution/
 │
 ├── SchoolMaster.Domain/                     (Project 1 - Core)
-│   ├── Models/
+│   ├── Entities/
 │   │   ├── Student.cs
 │   │   ├── Staff.cs
 │   │   └── User.cs
+│   ├── Common/
+│   │   └── BaseEntity.cs
 │   └── SchoolMaster.Domain.csproj           (No Dependencies)
 │
 ├── SchoolMaster.Application/                (Project 2 - Business Logic)
-│   ├── DTOs/
-│   │   ├── AuthResponse.cs
-│   │   ├── BaseResponse.cs
-│   │   ├── RegisterRequest.cs
-│   │   └── (All other DTOs...)
-│   ├── Services/
-│   │   ├── Interfaces/
-│   │   │   ├── IAuthService.cs
-│   │   │   ├── IStudentService.cs
-│   │   │   └── IEmailService.cs         <- Even Email is defined here!
-│   │   ├── AuthService.cs
-│   │   └── StudentService.cs
-│   ├── Repositories/
-│   │   └── Interfaces/
-│   │       ├── IAuthRepository.cs
-│   │       └── IStudentRepository.cs       <- Concrete repos are hidden in Infrastructure
-│   └── SchoolMaster.Application.csproj      (References SchoolMaster.Domain)
+│   ├── Common/                              (Logic shared across all features)
+│   │   ├── Behaviors/                       <- MediatR Pipeline Behaviors
+│   │   ├── DTOs/
+│   │   │   └── BaseResponse.cs
+│   │   └── Mappings/
+│   ├── Features/                            (The Heart of CQRS - Vertical Slices)
+│   │   ├── Auth/
+│   │   │   ├── Commands/
+│   │   │   │   ├── Login/
+│   │   │   │   └── Register/
+│   │   │   └── Queries/
+│   │   └── Students/
+│   │       ├── Commands/
+│   │       │   └── EnrollStudent/           <- Each feature is isolated
+│   │       │       ├── EnrollStudentCommand.cs
+│   │       │       ├── EnrollStudentHandler.cs
+│   │       │       └── EnrollStudentValidator.cs
+│   │       └── Queries/
+│   │           └── GetStudentById/
+│   ├── Interfaces/
+│   │   ├── IEmailService.cs                 <- External service contracts
+│   │   └── ISchoolMasterContext.cs          <- Database contract
+│   └── SchoolMaster.Application.csproj      (References SchoolMaster.Domain + MediatR)
 │
 ├── SchoolMaster.Infrastructure/             (Project 3 - Data & External Services)
-│   ├── Data/
-│   │   └── SchoolMasterContext.cs           <- EF Core lives here
-│   ├── Repositories/
-│   │   ├── AuthRepository.cs
-│   │   └── StudentRepository.cs
+│   ├── Persistence/
+│   │   └── SchoolMasterContext.cs           <- EF Core Implementation
 │   ├── Services/
-│   │   └── EmailService.cs              <- MailKit lives here
+│   │   └── EmailService.cs              <- MailKit/SendGrid Implementation
 │   └── SchoolMaster.Infrastructure.csproj   (References SchoolMaster.Application)
 │
 └── SchoolMaster.Api/                        (Project 4 - Presentation)
     ├── Controllers/
     │   ├── AuthController.cs
-    │   └── StudentsController.cs
+    │   └── StudentsController.cs           <- Only injects IMediator!
     ├── Middleware/
     │   └── ExceptionMiddleware.cs
     ├── appsettings.json
-    ├── Program.cs                       <- DI mapping connects Infrastructure to Application here
+    ├── Program.cs                       <- Bootstraps MediatR and DI
     ├── SchoolMaster.http
-    ├── Dockerfile                       <- Containerizes the Api
+    ├── Dockerfile
     └── SchoolMaster.Api.csproj           (References Application & Infrastructure)
 ```
 

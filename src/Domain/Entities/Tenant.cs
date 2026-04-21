@@ -1,0 +1,12 @@
+namespace SchoolMaster.Domain.Entities;
+using SchoolMaster.Domain.Enums;
+public class Tenant
+{
+    public Guid Id { get; private set; }
+    public string Name { get; private set; }        // "Greenfield Academy"
+    public string Subdomain { get; private set; }   // "greenfield" → greenfield.yourapp.com
+    public string ContactEmail { get; private set; }
+    public TenantStatus Status { get; private set; } 
+    public TenantPlan Plan { get; private set; }    // Free, Basic, Pro
+    public DateTime CreatedAt { get; private set; }
+}
