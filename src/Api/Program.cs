@@ -13,7 +13,6 @@ using System.Threading.RateLimiting;
 using Hangfire;
 using Hangfire.PostgreSql;
 using SchoolMaster.Infrastructure.Persistence;
-using SchoolMaster.Application.Repositories;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -36,10 +35,6 @@ try
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
-    builder.Services.AddScoped<IOnboardingService, OnboardingService>();
-    builder.Services.AddScoped<IAuthService, AuthService>();
-    builder.Services.AddScoped<ITenantRepository, TenantRepository>();
-    builder.Services.AddScoped<IUserRepository, UserRepository>();
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
     builder.Services.Configure<EmailVerificationOptions>(builder.Configuration.GetSection("EmailVerification"));
@@ -93,6 +88,35 @@ try
         // 2. Add the Hangfire Server (the background worker that processes jobs)
         builder.Services.AddHangfireServer();
     }
+
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+            Description = "Enter: Bearer {your JWT token}"
+        });
+
+        options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+    });
+
     var app = builder.Build();
 
     if (!isTesting)
@@ -108,6 +132,12 @@ try
         }
     }
 
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
 
     app.UseMiddleware<ExceptionMiddleware>();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()
