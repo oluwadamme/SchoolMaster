@@ -1,4 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using SchoolMaster.Application.Repositories;
+using SchoolMaster.Infrastructure.Persistence;
+using SchoolMaster.Domain.Entities;
 
 public class UserRepository : IUserRepository
 {
@@ -17,6 +20,6 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> ExistsByEmailAsync(string email)
     {
-        return await _context.Users.AnyAsync(x => x.Email == email);
+        return await _context.Users.IgnoreQueryFilters().AnyAsync(x => x.Email == email);
     }
 }

@@ -1,8 +1,10 @@
-﻿using System;
+namespace SchoolMaster.Application.Services.Interfaces;
 
-public class Class1
+using System;
+using System.Threading.Tasks;
+using SchoolMaster.Application.DTOs;
+
+public interface IAuthService
 {
-	public Class1()
-	{
-	}
+    Task<BaseResponse<Guid>> CreateAdminAsync(CreateAdminRequest request, Guid tenantId);
 }

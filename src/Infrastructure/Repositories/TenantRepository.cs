@@ -1,6 +1,8 @@
-﻿using System;
-
+using System;
 using Microsoft.EntityFrameworkCore;
+using SchoolMaster.Application.Repositories;
+using SchoolMaster.Infrastructure.Persistence;
+using SchoolMaster.Domain.Entities;
 
 public class TenantRepository : ITenantRepository
 {

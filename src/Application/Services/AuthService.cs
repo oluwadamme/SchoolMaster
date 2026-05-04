@@ -1,12 +1,16 @@
-﻿using SchoolMaster.Application.DTOs;
-using SchoolMaster.Application.Repositories;
-
 namespace SchoolMaster.Application.Services;
+
+using SchoolMaster.Application.DTOs;
+using SchoolMaster.Application.Repositories;
+using SchoolMaster.Application.Services.Interfaces;
+using SchoolMaster.Domain.Entities;
+using SchoolMaster.Domain.Enums;
+
 
 public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
-    private readonly IUnitOfWork _unitOfWork;
+    // private readonly IUnitOfWork _unitOfWork;
 
     public AuthService(IUserRepository userRepository)
     {

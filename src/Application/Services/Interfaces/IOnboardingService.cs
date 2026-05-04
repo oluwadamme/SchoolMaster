@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using SchoolMaster.Application.DTOs;
 
 namespace SchoolMaster.Application.Services.Interfaces;
 

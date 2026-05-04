@@ -1,5 +1,6 @@
 using SchoolMaster.Application.DTOs;
 using SchoolMaster.Application.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 
 namespace SchoolMaster.Api.Controllers;
 

@@ -9,4 +9,15 @@ public class Tenant
     public TenantStatus Status { get; private set; } 
     public TenantPlan Plan { get; private set; }    // Free, Basic, Pro
     public DateTime CreatedAt { get; private set; }
+
+    public Tenant(Guid id, string name, string subdomain, string contactEmail, TenantStatus status, TenantPlan plan, DateTime createdAt)
+    {
+        Id = id;
+        Name = name;
+        Subdomain = subdomain;
+        ContactEmail = contactEmail;
+        Status = status;
+        Plan = plan;
+        CreatedAt = createdAt;
+    }
 }

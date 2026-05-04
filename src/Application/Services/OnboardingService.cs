@@ -1,4 +1,9 @@
-﻿using System;
+using System;
+using SchoolMaster.Application.Repositories;
+using SchoolMaster.Application.DTOs;
+using SchoolMaster.Domain.Entities;
+using SchoolMaster.Application.Services.Interfaces;
+using SchoolMaster.Domain.Enums;
 namespace SchoolMaster.Application.Services;
 
 public class OnboardingService : IOnboardingService
@@ -19,7 +24,7 @@ public class OnboardingService : IOnboardingService
         // 1. Check admin email uniqueness
         if (await _userRepository.ExistsByEmailAsync(request.AdminEmail))
         {
-            return BaseResponse<Guid>.ErrorResponse("Admin email already exists");
+            throw new ArgumentException("Admin email already exists");
         }
 
         // 2. Create Tenant

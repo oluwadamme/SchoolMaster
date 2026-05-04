@@ -1,7 +1,8 @@
-﻿
 using Microsoft.AspNetCore.Mvc;
 using SchoolMaster.Application.DTOs;
 using SchoolMaster.Application.Services.Interfaces;
+
+namespace SchoolMaster.Api.Controllers;
 
 //“Create my school and make me the admin”
 [ApiController]
@@ -19,6 +20,6 @@ public class OnboardingController : ControllerBase
     public async Task<IActionResult> OnboardTenant(OnboardTenantRequest request)
     {
         var result = await _onboardingService.CreateTenantWithAdminAsync(request);
-        return Ok(result);
+        return CreatedAtAction(nameof(OnboardTenant), new { id = result.Data }, result);
     }
 }
