@@ -1,6 +1,17 @@
-@SchoolMaster_HostAddress = http://localhost:5208
+@SchoolMaster_HostAddress = http://localhost:7001
 
 GET {{SchoolMaster_HostAddress}}/weatherforecast/
 Accept: application/json
 
-###
+### onboard tenant
+POST {{SchoolMaster_HostAddress}}/api/onboarding/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "schoolName": "Greenfield Academy",
+  "subdomain": "greenfield",
+  "contactEmail": "hello@greenfield.edu",
+  "adminEmail": "admin@greenfield.edu",
+  "adminPassword": "SecurePassword123!"
+}

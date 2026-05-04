@@ -50,4 +50,5 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
     public DbSet<User> Users { get; set; }
     public DbSet<Student> Students { get; set; }
     public DbSet<Staff> Staff { get; set; }
+    public DbSet<Tenant> Tenants { get; set; }
 }
