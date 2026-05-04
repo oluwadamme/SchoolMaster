@@ -5,7 +5,7 @@ using SchoolMaster.Application.Services.Interfaces;
 
 //“Create my school and make me the admin”
 [ApiController]
-[Route("api/onboarding")]
+[Route("api/[controller]")]
 public class OnboardingController : ControllerBase
 {
     private readonly IOnboardingService _onboardingService;
@@ -19,6 +19,6 @@ public class OnboardingController : ControllerBase
     public async Task<IActionResult> OnboardTenant(OnboardTenantRequest request)
     {
         var result = await _onboardingService.CreateTenantWithAdminAsync(request);
-        return Ok(result);
+        return CreatedAtAction(nameof(OnboardTenant), new { id = result.Data }, result);
     }
 }

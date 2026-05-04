@@ -13,6 +13,8 @@ using System.Threading.RateLimiting;
 using Hangfire;
 using Hangfire.PostgreSql;
 using SchoolMaster.Infrastructure.Persistence;
+using SchoolMaster.Application.Repositories;
+
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -26,8 +28,6 @@ try
 
 
     // Add services to the container.
-    // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-    builder.Services.AddOpenApi();
     builder.Services.AddControllers();
     // 1. Tell ASP.NET Core to auto-validate requests using FluentValidation
     builder.Services.AddFluentValidationAutoValidation();
@@ -35,6 +35,10 @@ try
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
+    builder.Services.AddScoped<IOnboardingService, OnboardingService>();
+    builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<ITenantRepository, TenantRepository>();
+    builder.Services.AddScoped<IUserRepository, UserRepository>();
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
     builder.Services.Configure<EmailVerificationOptions>(builder.Configuration.GetSection("EmailVerification"));
@@ -132,13 +136,6 @@ try
         }
     }
 
-
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseSwagger();
-        app.UseSwaggerUI();
-    }
-
     app.UseMiddleware<ExceptionMiddleware>();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()
 
@@ -148,7 +145,8 @@ try
     app.UseRateLimiter();
     if (app.Environment.IsDevelopment())
     {
-        app.MapOpenApi();
+        app.UseSwagger();
+        app.UseSwaggerUI();
     }
 
     app.UseHttpsRedirection();
