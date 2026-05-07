@@ -46,7 +46,5 @@ services:
       - ConnectionStrings__DefaultConnection=Server=db;Port=5432;Database=schoolmaster;Username=postgres;Password=postgres
       - ConnectionStrings__Redis=redis:6379
 
-      
-
 volumes:
   pgdata:

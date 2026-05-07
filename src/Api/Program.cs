@@ -5,6 +5,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using SchoolMaster.Infrastructure.Options;
 using SchoolMaster.Application.Services;
+using SchoolMaster.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -40,9 +41,11 @@ try
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
     builder.Services.AddScoped<ITenantRepository, TenantRepository>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
+    builder.Services.AddScoped<IEmailService, EmailService>();
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
     builder.Services.Configure<EmailVerificationOptions>(builder.Configuration.GetSection("EmailVerification"));
+    builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("EmailSettings"));
 
     builder.Services.AddAuthentication("Bearer").AddJwtBearer(options =>
        {

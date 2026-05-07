@@ -9,9 +9,9 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "schoolName": "Greenfield Academy",
-  "subdomain": "greenfield",
-  "contactEmail": "hello@greenfield.edu",
-  "adminEmail": "admin@greenfield.edu",
+  "schoolName": "Susie Academy",
+  "subdomain": "susie.academy.com",
+  "contactEmail": "hello@susie.edu",
+  "adminEmail": "susanojone@gmail.com",
   "adminPassword": "SecurePassword123!"
 }
