@@ -22,7 +22,8 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.File("logs/api-logs.json") // The File Sink!
     .CreateLogger();
 
-DotNetEnv.Env.Load();
+// Load .env file but DO NOT overwrite existing environment variables (like those set by Docker)
+DotNetEnv.Env.NoClobber().Load();
 
 try
 {

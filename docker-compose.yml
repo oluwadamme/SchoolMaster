@@ -31,9 +31,17 @@ services:
 
   # ------------- SchoolMaster API -------------
   api:
-    build: .
+    build: 
+      context: .
+      target: build
     ports:
       - "7001:8080"
+    volumes:
+      - .:/src
+      - /src/bin
+      - /src/obj
+    working_dir: /src
+    command: dotnet watch run --project SchoolMaster.csproj --urls http://0.0.0.0:8080
     depends_on:
       db:
         condition: service_healthy
@@ -43,6 +51,7 @@ services:
       - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
       - ConnectionStrings__DefaultConnection=Server=db;Port=5432;Database=schoolmaster;Username=postgres;Password=postgres
       - ConnectionStrings__Redis=redis:6379
 

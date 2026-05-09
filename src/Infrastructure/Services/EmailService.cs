@@ -6,7 +6,7 @@ using SchoolMaster.Infrastructure.Options;
 using Serilog;
 namespace SchoolMaster.Infrastructure.Services;
 
-public class EmailService(IOptions<EmailOptions> options, ILogger<EmailService> logger) : IEmailService
+public class EmailService(IOptions<EmailOptions> options) : IEmailService
 {
     public async Task SendEmailAsync(string email, string name, string subject, string body)
     {
@@ -25,9 +25,7 @@ public class EmailService(IOptions<EmailOptions> options, ILogger<EmailService> 
 
             message.Body = new TextPart("plain")
             {
-                Text = $@"Hey {name},
-
-            {body}
+                Text = $@"{body}
 
             -- {senderName}"
             };

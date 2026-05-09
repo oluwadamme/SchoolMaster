@@ -4,14 +4,16 @@ GET {{SchoolMaster_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ### onboard tenant
-POST {{SchoolMaster_HostAddress}}/api/onboarding/register
+POST {{SchoolMaster_HostAddress}}/api/onboarding/tenants
 Content-Type: application/json
 Accept: application/json
 
 {
   "schoolName": "Susie Academy",
-  "subdomain": "susie.academy.com",
+  "subdomain": "susie.academy.edu",
   "contactEmail": "hello@susie.edu",
   "adminEmail": "susanojone@gmail.com",
+  "AdminFirstName":"Susan",
+  "AdminLastName":"Ojone",
   "adminPassword": "SecurePassword123!"
 }
