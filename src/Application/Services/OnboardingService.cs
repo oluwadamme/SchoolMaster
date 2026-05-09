@@ -46,13 +46,23 @@ public class OnboardingService : IOnboardingService
         }
 
         // 2. Create Tenant
-        var tenant = new Tenant(Guid.NewGuid(), request.SchoolName, request.Subdomain, request.ContactEmail, TenantStatus.Active, TenantPlan.Basic, DateTime.UtcNow);
+        var tenant = new Tenant
+        {
+            Id = Guid.NewGuid(),
+            Name = request.SchoolName,
+            Subdomain = request.Subdomain,
+            ContactEmail = request.ContactEmail,
+            Status = TenantStatus.Active,
+            Plan = TenantPlan.Basic,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
 
         await _tenantRepository.AddTenantAsync(tenant);
 
         var emailVerificationToken = GenerateVerificationToken();
         var subject = "Verify your email";
-        var body = $"Hello {request.SchoolName},\n\nThanks for registering with SchoolMaster!\n\nPlease verify your email by using the code below: {emailVerificationToken}\n\nRegards,\n\nSchoolMaster Team";
+        var body = $"Hello {request.AdminFirstName},\n\nThanks for registering with SchoolMaster!\n\nPlease verify your email by using the code below: {emailVerificationToken}\n\nRegards,\n\nSchoolMaster Team";
 
 
         // 3. Create Admin User (linked to tenant)
