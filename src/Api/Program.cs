@@ -15,6 +15,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using SchoolMaster.Infrastructure.Persistence;
 using SchoolMaster.Application.Repositories;
+using SchoolMaster.Application.DTOs;
 
 
 Log.Logger = new LoggerConfiguration()
@@ -36,7 +37,9 @@ try
     // 1. Tell ASP.NET Core to auto-validate requests using FluentValidation
     builder.Services.AddFluentValidationAutoValidation();
     // 2. Tell DI to scan your project and register RegisterRequestValidator (and any others you make)
-    builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+    builder.Services.AddValidatorsFromAssemblyContaining<OnboardTenantRequestValidator>();
+    builder.Services.AddValidatorsFromAssemblyContaining<VerifyUserEmailRequestValidator>();
+    builder.Services.AddValidatorsFromAssemblyContaining<ResendOtpRequestValidator>();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
@@ -142,6 +145,7 @@ try
     }
 
     app.UseMiddleware<ExceptionMiddleware>();
+    app.UseHttpsRedirection();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()
 
     app.UseAuthentication();   // ← BEFORE authorization
@@ -154,7 +158,6 @@ try
         app.UseSwaggerUI();
     }
 
-    app.UseHttpsRedirection();
 
     app.MapControllers();
     app.Run();
