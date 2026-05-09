@@ -22,4 +22,25 @@ public class UserRepository : IUserRepository
     {
         return await _context.Users.IgnoreQueryFilters().AnyAsync(x => x.Email == email);
     }
+
+    public async Task<User?> GetUserByEmailAsync(string email)
+    {
+        return await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == email);
+    }
+
+    public async Task<User?> GetUserByEmailAndTenantIdAsync(string email, Guid tenantId)
+    {
+        return await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == email && x.TenantId == tenantId);
+    }
+
+    public async Task<User?> GetUserByIdAsync(Guid userId, Guid tenantId)
+    {
+        return await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId);
+    }
+
+    public async Task UpdateUserAsync(User user)
+    {
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+    }
 }
