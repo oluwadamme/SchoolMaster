@@ -60,9 +60,9 @@ public class OnboardingService : IOnboardingService
 
         await _tenantRepository.AddTenantAsync(tenant);
 
-        var emailVerificationToken = GenerateVerificationToken();
+        var otp = GenerateVerificationOtp();
         var subject = "Verify your email";
-        var body = $"Hello {request.AdminFirstName},\n\nThanks for registering with SchoolMaster!\n\nPlease verify your email by using the code below: {emailVerificationToken}\n\nRegards,\n\nSchoolMaster Team";
+        var body = $"Hello {request.AdminFirstName},\n\nThanks for registering with SchoolMaster!\n\nPlease verify your email by using the code below: {otp}\n\nRegards,\n\nSchoolMaster Team";
 
 
         // 3. Create Admin User (linked to tenant)
@@ -76,7 +76,7 @@ public class OnboardingService : IOnboardingService
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.AdminPassword),
             Role = UserRole.Admin,
             IsEmailVerified = false,
-            OtpToken = emailVerificationToken,
+            OtpToken = otp,
             OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -95,7 +95,7 @@ public class OnboardingService : IOnboardingService
             tenant.Id
         );
     }
-    private string GenerateVerificationToken()
+    private string GenerateVerificationOtp()
     {
         // generate 4 digit otp, if it is development env, the code will be 0000 else it will generate random code
         // if (Environment.IsDevelopment())
@@ -129,7 +129,7 @@ public class OnboardingService : IOnboardingService
         return BaseResponse<bool>.SuccessResponse("Email verified successfully", true);
     }
 
-    public async Task<BaseResponse<bool>> ResendVerificationTokenAsync(ResendOtpRequest request)
+    public async Task<BaseResponse<bool>> ResendVerificationOtpAsync(ResendOtpRequest request)
     {
         var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, request.TenantId);
         if (user == null)
@@ -140,11 +140,11 @@ public class OnboardingService : IOnboardingService
         {
             throw new ArgumentException("Email already verified.");
         }
-        var emailVerificationToken = GenerateVerificationToken();
+        var otp = GenerateVerificationOtp();
         var subject = "Verify your email";
-        var body = $"Hello {user.FirstName},\n\nThanks for registering with SchoolMaster!\n\nPlease verify your email by using the code below: {emailVerificationToken}\n\nRegards,\n\nSchoolMaster Team";
+        var body = $"Hello {user.FirstName},\n\nThanks for registering with SchoolMaster!\n\nPlease verify your email by using the code below: {otp}\n\nRegards,\n\nSchoolMaster Team";
 
-        user.OtpToken = emailVerificationToken;
+        user.OtpToken = otp;
         user.OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes);
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateUserAsync(user);

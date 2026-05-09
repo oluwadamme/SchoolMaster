@@ -6,5 +6,5 @@ public interface IOnboardingService
 {
     Task<BaseResponse<Guid>> CreateTenantWithAdminAsync(OnboardTenantRequest request);
     Task<BaseResponse<bool>> VerifyUserEmailAsync(VerifyUserEmailRequest request);
-    Task<BaseResponse<bool>> ResendVerificationTokenAsync(ResendOtpRequest request);
+    Task<BaseResponse<bool>> ResendVerificationOtpAsync(ResendOtpRequest request);
 }

@@ -29,10 +29,10 @@ public class OnboardingController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("resend-verification-token")]
-    public async Task<ActionResult> ResendVerificationToken([FromBody] ResendOtpRequest request)
+    [HttpPost("resend-verification-otp")]
+    public async Task<ActionResult> ResendVerificationOtp([FromBody] ResendOtpRequest request)
     {
-        var result = await _onboardingService.ResendVerificationTokenAsync(request);
+        var result = await _onboardingService.ResendVerificationOtpAsync(request);
         return Ok(result);
     }
 
