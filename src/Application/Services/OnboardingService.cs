@@ -89,7 +89,7 @@ public class OnboardingService : IOnboardingService
         _backgroundJobClient.Enqueue<IEmailService>(x =>
         x.SendEmailAsync(request.AdminEmail, request.AdminFirstName, subject, body));
 
-        // 4. Return tenantId
+        // 5. Return tenantId
         return BaseResponse<Guid>.SuccessResponse(
             "Tenant and Admin created successfully",
             tenant.Id
