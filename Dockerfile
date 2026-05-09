@@ -11,9 +11,12 @@ COPY . .
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
 # Stage 2: Runtime (much smaller image)
+#running environment container creates when it starts
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
 EXPOSE 8080
+
+#instructions on how to start app
 ENTRYPOINT ["dotnet", "SchoolMaster.dll"]

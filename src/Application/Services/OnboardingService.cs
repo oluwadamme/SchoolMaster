@@ -1,9 +1,10 @@
-using System;
-using SchoolMaster.Application.Repositories;
-using SchoolMaster.Application.DTOs;
-using SchoolMaster.Domain.Entities;
+﻿using System;
 using SchoolMaster.Application.Services.Interfaces;
+using SchoolMaster.Application.Repositories;
+using SchoolMaster.Domain.Entities;
 using SchoolMaster.Domain.Enums;
+using SchoolMaster.Application.DTOs;
+
 namespace SchoolMaster.Application.Services;
 
 public class OnboardingService : IOnboardingService
@@ -24,42 +25,26 @@ public class OnboardingService : IOnboardingService
         // 1. Check admin email uniqueness
         if (await _userRepository.ExistsByEmailAsync(request.AdminEmail))
         {
-            throw new ArgumentException("Admin email already exists");
+            throw new ArgumentException("Admin email already exists.");
+        }
+
+        if (await _tenantRepository.ExistsBySubdomainAsync(request.Subdomain))
+        {
+            throw new ArgumentException("Subdomain already exists.");
         }
 
         // 2. Create Tenant
-        var tenant = new Tenant(
-            Guid.NewGuid(),
-            request.SchoolName,
-            request.Subdomain,
-            request.ContactEmail,
-            TenantStatus.Active,
-            TenantPlan.Basic,
-            DateTime.UtcNow
-        );
+        var tenant = new Tenant(Guid.NewGuid(), request.SchoolName, request.Subdomain, request.ContactEmail, TenantStatus.Active, TenantPlan.Basic, DateTime.UtcNow);
 
-        await _tenantRepository.AddAsync(tenant);
+        await _tenantRepository.AddTenantAsync(tenant);
 
         // 3. Create Admin User (linked to tenant)
-        var adminUser = new User(
-            Guid.NewGuid(),
-            tenant.Id,
-            request.AdminEmail,
-            BCrypt.Net.BCrypt.HashPassword(request.AdminPassword),
-            UserRole.Admin,
-            true,
-            null,
-            null,
-            null,
-            null,
-            DateTime.UtcNow
-        );
+        var adminUser = new User(Guid.NewGuid(), tenant.Id, request.AdminFirstName, request.AdminLastName, request.AdminEmail, BCrypt.Net.BCrypt.HashPassword(request.AdminPassword), UserRole.Admin, false, DateTime.UtcNow);
 
-        await _userRepository.AddAsync(adminUser);
+        await _userRepository.AddUserAsync(adminUser);
 
-        // 4. Save everything in ONE transaction
 
-        // 5. Return tenantId
+        // 4. Return tenantId
         return BaseResponse<Guid>.SuccessResponse(
             "Tenant and Admin created successfully",
             tenant.Id

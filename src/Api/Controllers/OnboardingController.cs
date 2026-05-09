@@ -15,7 +15,7 @@ public class OnboardingController : ControllerBase
         _onboardingService = onboardingService;
     }
 
-    [HttpPost("register")]
+    [HttpPost("tenants")]
     public async Task<IActionResult> OnboardTenant(OnboardTenantRequest request)
     {
         var result = await _onboardingService.CreateTenantWithAdminAsync(request);

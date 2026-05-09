@@ -5,5 +5,6 @@ namespace SchoolMaster.Application.Repositories;
 
 public interface ITenantRepository
 {
-    Task AddAsync(Tenant tenant);
+    Task AddTenantAsync(Tenant tenant);
+    Task<bool> ExistsBySubdomainAsync(string subdomain);
 }

@@ -13,9 +13,14 @@ public class TenantRepository : ITenantRepository
         _context = context;
     }
 
-    public async Task AddAsync(Tenant tenant)
+    public async Task AddTenantAsync(Tenant tenant)
     {
         await _context.Tenants.AddAsync(tenant);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<bool> ExistsBySubdomainAsync(string subdomain)
+    {
+        return await _context.Tenants.IgnoreQueryFilters().AnyAsync(x => x.Subdomain == subdomain);
     }
 }

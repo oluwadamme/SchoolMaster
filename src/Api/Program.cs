@@ -21,6 +21,8 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.File("logs/api-logs.json") // The File Sink!
     .CreateLogger();
 
+DotNetEnv.Env.Load();
+
 try
 {
     var builder = WebApplication.CreateBuilder(args);
@@ -36,7 +38,6 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
-    builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<ITenantRepository, TenantRepository>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
 
@@ -154,7 +155,7 @@ try
     app.MapControllers();
     app.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "The application failed to start correctly");
 }

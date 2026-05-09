@@ -9,6 +9,8 @@ public class OnboardTenantRequest
     public string ContactEmail { get; set; }
 
     // Admin info
+    public string AdminFirstName { get; set; }
+    public string AdminLastName { get; set; }
     public string AdminEmail { get; set; }
     public string AdminPassword { get; set; }
 }
