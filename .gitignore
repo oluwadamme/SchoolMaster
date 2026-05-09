@@ -100,3 +100,4 @@ Desktop.ini
 # Linux
 *~
 src/Api/appsettings.json
+.vscode/
