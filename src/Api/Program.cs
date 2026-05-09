@@ -13,11 +13,15 @@ using System.Threading.RateLimiting;
 using Hangfire;
 using Hangfire.PostgreSql;
 using SchoolMaster.Infrastructure.Persistence;
+using SchoolMaster.Application.Repositories;
+
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("logs/api-logs.json") // The File Sink!
     .CreateLogger();
+
+DotNetEnv.Env.Load();
 
 try
 {
@@ -26,8 +30,6 @@ try
 
 
     // Add services to the container.
-    // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-    builder.Services.AddOpenApi();
     builder.Services.AddControllers();
     // 1. Tell ASP.NET Core to auto-validate requests using FluentValidation
     builder.Services.AddFluentValidationAutoValidation();
@@ -35,6 +37,9 @@ try
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
+    builder.Services.AddScoped<IOnboardingService, OnboardingService>();
+    builder.Services.AddScoped<ITenantRepository, TenantRepository>();
+    builder.Services.AddScoped<IUserRepository, UserRepository>();
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
     builder.Services.Configure<EmailVerificationOptions>(builder.Configuration.GetSection("EmailVerification"));
@@ -88,6 +93,35 @@ try
         // 2. Add the Hangfire Server (the background worker that processes jobs)
         builder.Services.AddHangfireServer();
     }
+
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+            Description = "Enter: Bearer {your JWT token}"
+        });
+
+        options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+    });
+
     var app = builder.Build();
 
     if (!isTesting)
@@ -103,7 +137,6 @@ try
         }
     }
 
-
     app.UseMiddleware<ExceptionMiddleware>();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()
 
@@ -113,7 +146,8 @@ try
     app.UseRateLimiter();
     if (app.Environment.IsDevelopment())
     {
-        app.MapOpenApi();
+        app.UseSwagger();
+        app.UseSwaggerUI();
     }
 
     app.UseHttpsRedirection();
@@ -121,7 +155,7 @@ try
     app.MapControllers();
     app.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "The application failed to start correctly");
 }

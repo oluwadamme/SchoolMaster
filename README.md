@@ -22,7 +22,7 @@
 - **Automated Absence Notifications** — Domain event triggers a Hangfire background job that sends email + push notification to parent within 5 seconds of absence being recorded.
 - **Attendance Threshold Alerts** — Configurable alert when a student's attendance drops below a set percentage (default 75%).
 - **Attendance Reports** — Filterable by student, class, date range, and status. Exportable as PDF.
-- **Service/Repository Pattern** — Clean Architecture: Domain → Application → Infrastructure → API. All layers communicate through interfaces. CQRS via MediatR separates read queries from write commands.
+- **N-Tier Architecture** — DB → Repository → Service → Controller pattern. All layers communicate through interfaces for a straightforward data flow and clear separation of concerns.
 - **Multi-Tenant Design** — Every query is scoped to a `TenantId`. Global EF Core query filter ensures no school sees another school's data. Tenant resolved from JWT claim.
 - **Standardized Responses** — All endpoints return a consistent `BaseResponse<T>` wrapper with `success`, `message`, and `data` fields.
 - **Global Error Handling** — Centralized middleware maps domain exceptions to HTTP status codes.
@@ -46,7 +46,6 @@
 | Npgsql (EF Core Provider) | 10.0 | PostgreSQL driver |
 | PostgreSQL | 16+ | Primary relational database |
 | Redis | 7+ | Distributed cache + SignalR backplane |
-| MediatR | 12.x | CQRS — commands and queries |
 | FluentValidation | 11.x | Request validation |
 | BCrypt.Net-Next | 4.x | Password hashing |
 | MailKit | 4.x | SMTP email (OTP, notifications) |
@@ -67,7 +66,10 @@
 
 ### Architecture
 
-All business logic lives in the Application layer. Domain entities are pure C# with no EF Core dependencies. Infrastructure implements the interfaces the Application layer defines.
+The application follows an N-Tier architecture (Controller → Service → Repository → Database). 
+- **Controllers** handle HTTP requests and routing.
+- **Services** contain all the core business logic.
+- **Repositories** abstract the Entity Framework Core data access and database operations.
 
 ---
 
@@ -269,13 +271,35 @@ classId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 
 ---
 
+### Quick Start (Docker & Migrations)
+
+**1. Run the application with Docker**
+The application is fully dockerized with a PostgreSQL database and Redis cache. To start everything:
+```bash
+docker compose up --build -d
+```
+*The API will be available at `http://localhost:7001`.*
+
+**2. Database Migrations**
+To create a new EF Core migration after changing your entities:
+```bash
+dotnet ef migrations add <MigrationName>
+```
+
+To apply the migrations, simply rebuild and restart the API container (the application automatically applies pending migrations on startup):
+```bash
+docker compose up --build -d api
+```
+
+---
+
 ### Phase 1 Potential Improvements
 
 - [] JWT + refresh token auth with rotation
 - [] OTP email verification and password reset
 - [] Multi-tenant architecture with TenantId query filter
 - [] RBAC with fine-grained role permissions
-- [] Clean Architecture + CQRS via MediatR
+- [] N-Tier Architecture (DB → Repo → Service → Controller)
 - [] Global error handling middleware
 - [] FluentValidation on all request DTOs
 - [] Hangfire background jobs for notifications

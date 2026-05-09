@@ -35,14 +35,7 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
             .HasForeignKey(u => u.TenantId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<Student>()
-        .HasQueryFilter(s => s.TenantId == _currentTenant.Id);
-
-        modelBuilder.Entity<User>()
-            .HasQueryFilter(s => s.TenantId == _currentTenant.Id);
-
-        modelBuilder.Entity<Staff>()
-            .HasQueryFilter(s => s.TenantId == _currentTenant.Id);
+       
 
 
     }
@@ -50,4 +43,5 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
     public DbSet<User> Users { get; set; }
     public DbSet<Student> Students { get; set; }
     public DbSet<Staff> Staff { get; set; }
+    public DbSet<Tenant> Tenants { get; set; }
 }

@@ -39,15 +39,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Server=db;Port=5432;Database=schoolmaster;Username=postgres;Password=postgres
       - ConnectionStrings__Redis=redis:6379
-      - Jwt__Issuer=https://localhost:7000
-      - Jwt__Audience=https://localhost:7000
-      - Jwt__Key=greatIstheefaithFullNessOfGod,EarlyTheMorning,yourmerciesIsee,allaroundme,ohLordyouaregood,andIwillliftmyvoice
-      - Jwt__ExpirationInMinutes=15
-      - Jwt__RefreshTokenExpirationInDays=30
+
+      
 
 volumes:
   pgdata:

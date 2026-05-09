@@ -10,7 +10,7 @@ public class CurrentTenant(IHttpContextAccessor _httpContextAccessor) : ICurrent
             var claim = _httpContextAccessor.HttpContext?.User.FindFirst("tenant_id")?.Value;
 
             if (string.IsNullOrEmpty(claim))
-                throw new UnauthorizedAccessException("Tenant context not found.");
+                return Guid.Empty;
 
             return Guid.Parse(claim);
         }

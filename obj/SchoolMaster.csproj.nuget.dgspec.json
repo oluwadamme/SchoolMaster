@@ -1,26 +1,32 @@
 {
   "format": 1,
   "restore": {
-    "/Users/nombauser/Documents/dotnet_projects/SchoolMaster/SchoolMaster.csproj": {}
+    "C:\\Users\\Dr Yinka\\SchoolMaster\\SchoolMaster.csproj": {}
   },
   "projects": {
-    "/Users/nombauser/Documents/dotnet_projects/SchoolMaster/SchoolMaster.csproj": {
+    "C:\\Users\\Dr Yinka\\SchoolMaster\\SchoolMaster.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/nombauser/Documents/dotnet_projects/SchoolMaster/SchoolMaster.csproj",
+        "projectUniqueName": "C:\\Users\\Dr Yinka\\SchoolMaster\\SchoolMaster.csproj",
         "projectName": "SchoolMaster",
-        "projectPath": "/Users/nombauser/Documents/dotnet_projects/SchoolMaster/SchoolMaster.csproj",
-        "packagesPath": "/Users/nombauser/.nuget/packages/",
-        "outputPath": "/Users/nombauser/Documents/dotnet_projects/SchoolMaster/obj/",
+        "projectPath": "C:\\Users\\Dr Yinka\\SchoolMaster\\SchoolMaster.csproj",
+        "packagesPath": "C:\\Users\\Dr Yinka\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Dr Yinka\\SchoolMaster\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/Users/nombauser/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\Dr Yinka\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
-          "/opt/homebrew/Cellar/dotnet/10.0.103/libexec/library-packs": {},
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -52,6 +58,10 @@
             "BCrypt.Net-Next": {
               "target": "Package",
               "version": "[4.1.0, )"
+            },
+            "DotNetEnv": {
+              "target": "Package",
+              "version": "[3.2.0, )"
             },
             "FluentValidation": {
               "target": "Package",
@@ -85,10 +95,6 @@
               "target": "Package",
               "version": "[10.0.5, )"
             },
-            "Microsoft.AspNetCore.OpenApi": {
-              "target": "Package",
-              "version": "[10.0.3, )"
-            },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
               "version": "[10.0.5, )"
@@ -114,6 +120,10 @@
             "Serilog.Sinks.File": {
               "target": "Package",
               "version": "[6.0.0, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.6.2, )"
             }
           },
           "imports": [
@@ -135,7 +145,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/opt/homebrew/Cellar/dotnet/10.0.103/libexec/sdk/10.0.103/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
