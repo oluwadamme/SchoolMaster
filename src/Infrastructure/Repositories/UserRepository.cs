@@ -22,4 +22,9 @@ public class UserRepository : IUserRepository
     {
         return await _context.Users.IgnoreQueryFilters().AnyAsync(x => x.Email == email);
     }
+
+    public async Task<User?> GetUserByEmailAsync(string email)
+    {
+        return await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == email);
+    }
 }
