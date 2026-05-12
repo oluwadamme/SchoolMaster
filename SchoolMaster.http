@@ -17,3 +17,22 @@ Accept: application/json
   "AdminLastName":"Ojone",
   "adminPassword": "SecurePassword123!"
 }
+
+### verify email
+POST {{SchoolMaster_HostAddress}}/api/onboarding/verify-email
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "susanojone@gmail.com",
+  "otpToken": "1419"
+}
+
+### resend verification token
+POST {{SchoolMaster_HostAddress}}/api/onboarding/resend-verification-token
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "susanojone@gmail.com"
+}

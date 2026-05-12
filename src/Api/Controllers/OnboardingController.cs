@@ -16,9 +16,25 @@ public class OnboardingController : ControllerBase
     }
 
     [HttpPost("tenants")]
-    public async Task<IActionResult> OnboardTenant(OnboardTenantRequest request)
+    public async Task<ActionResult> OnboardTenant([FromBody] OnboardTenantRequest request)
     {
         var result = await _onboardingService.CreateTenantWithAdminAsync(request);
         return CreatedAtAction(nameof(OnboardTenant), new { id = result.Data }, result);
     }
+
+    [HttpPost("verify-email")]
+    public async Task<ActionResult> VerifyUserEmail([FromBody] VerifyUserEmailRequest request)
+    {
+        var result = await _onboardingService.VerifyUserEmailAsync(request);
+        return Ok(result);
+    }
+
+    [HttpPost("resend-verification-otp")]
+    public async Task<ActionResult> ResendVerificationOtp([FromBody] ResendOtpRequest request)
+    {
+        var result = await _onboardingService.ResendVerificationOtpAsync(request);
+        return Ok(result);
+    }
+
+
 }

@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using SchoolMaster.Application.DTOs;
-
+using SchoolMaster.Domain.CustomException;
 namespace SchoolMaster.Api.Middlewares;
 
 public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
@@ -23,6 +23,10 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         // Map exception types to HTTP status codes
         var (statusCode, message) = exception switch
         {
+            AlreadyExistException ex => (HttpStatusCode.Conflict, ex.Message),
+            InvalidOtpException ex => (HttpStatusCode.BadRequest, ex.Message),
+            OtpExpiredException ex => (HttpStatusCode.BadRequest, ex.Message),
+            UserNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
             ArgumentException ex => (HttpStatusCode.BadRequest, ex.Message),
             UnauthorizedAccessException ex => (HttpStatusCode.Unauthorized, ex.Message),
             KeyNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
