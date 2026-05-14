@@ -68,7 +68,7 @@ public class AuthService : IAuthService
         // We use the IJwtService tool to do this.
         var principal = _jwtService.GetPrincipalFromExpiredToken(request.AccessToken);
 
-        // 2. Get the user's ID from the dead token.
+        // 2. Get the user's ID from the principal.
         // The NameIdentifier claim holds the user's unique ID.
         var userIdClaim = principal.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier);
         if (userIdClaim == null)
@@ -77,7 +77,7 @@ public class AuthService : IAuthService
         }
         var userId = Guid.Parse(userIdClaim.Value);
 
-        // 3. Get the user's Tenant ID from the dead token.
+        // 3. Get the user's Tenant ID from the principal.
         // This is important for multi-tenancy.
         var tenantIdClaim = principal.Claims.FirstOrDefault(c => c.Type == "tenant_id");
         if (tenantIdClaim == null)
