@@ -76,6 +76,7 @@ public class JwtService : IJwtService
         var tokenHandler = new JwtSecurityTokenHandler();
         
         // 2. Try to read the token using the rules above.
+        //claims principal is the "User Object" that has information about the user
         var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
 
         // 3. Check if the token was signed with the correct math (HMAC SHA256).
