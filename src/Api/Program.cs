@@ -37,6 +37,7 @@ try
     // 1. Tell ASP.NET Core to auto-validate requests using FluentValidation
     builder.Services.AddFluentValidationAutoValidation();
     // 2. Tell DI to scan your project and register RegisterRequestValidator (and any others you make)
+    builder.Services.AddValidatorsFromAssemblyContaining<DeactivateUserByEmailRequestValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<OnboardTenantRequestValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<VerifyUserEmailRequestValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<ResendOtpRequestValidator>();

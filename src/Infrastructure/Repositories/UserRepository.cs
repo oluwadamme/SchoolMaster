@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Infrastructure.Persistence;
 using SchoolMaster.Domain.Entities;
+using SchoolMaster.Domain.Enums;
 
 public class UserRepository : IUserRepository
 {
@@ -25,18 +26,25 @@ public class UserRepository : IUserRepository
 
     public async Task<User?> GetUserByEmailAsync(string email)
     {
-        return await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == email);
+        return await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Email == email && x.Status == UserStatus.Active);
     }
 
     public async Task<User?> GetUserByEmailAndTenantIdAsync(string email, Guid tenantId)
     {
-        return await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == email && x.TenantId == tenantId);
+        return await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Email == email && x.TenantId == tenantId && x.Status == UserStatus.Active);
     }
 
     public async Task<User?> GetUserByIdAsync(Guid userId, Guid tenantId)
     {
-        return await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId);
+        return await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId && x.Status == UserStatus.Active);
     }
+
 
     public async Task UpdateUserAsync(User user)
     {
