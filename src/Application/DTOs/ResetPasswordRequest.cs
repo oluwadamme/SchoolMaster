@@ -6,7 +6,6 @@ public class ResetPasswordRequest
     public required string Email { get; set; }
     public required string Password { get; set; }
     public required string Otp { get; set; }
-    public required string Subdomain { get; set; }
 }
 
 public class ResetPasswordRequestValidator : AbstractValidator<ResetPasswordRequest>
@@ -24,8 +23,6 @@ public class ResetPasswordRequestValidator : AbstractValidator<ResetPasswordRequ
             .Matches("[!@#$%^&*]").WithMessage("Password must contain 1 special character.");
         RuleFor(x => x.Otp)
             .NotEmpty().WithMessage("You must enter a token.");
-        
-        RuleFor(x => x.Subdomain)
-            .NotEmpty().WithMessage("You must enter a subdomain.");
+
     }
 }

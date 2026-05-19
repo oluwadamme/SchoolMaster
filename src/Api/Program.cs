@@ -103,6 +103,8 @@ try
 
     builder.Services.AddSwaggerGen(options =>
     {
+        options.OperationFilter<SchoolMaster.Api.Swagger.TenantHeaderOperationFilter>();
+
         options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
         {
             Name = "Authorization",
