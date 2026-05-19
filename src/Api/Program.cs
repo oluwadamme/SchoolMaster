@@ -6,6 +6,7 @@ using FluentValidation.AspNetCore;
 using SchoolMaster.Infrastructure.Options;
 using SchoolMaster.Application.Services;
 using SchoolMaster.Infrastructure.Services;
+using SchoolMaster.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -44,11 +45,13 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
+    builder.Services.AddScoped<IStaffService, StaffService>(); // Register the StaffService
     builder.Services.AddScoped<ITenantRepository, TenantRepository>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
+    builder.Services.AddScoped<IStaffRepository, StaffRepository>(); // Register the StaffRepository
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IJwtService, JwtService>();
+    builder.Services.AddScoped<IJwtService, JwtService>();
 
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
@@ -148,6 +151,7 @@ builder.Services.AddScoped<IJwtService, JwtService>();
         }
     }
 
+     // MUST be before UseAuthentication
     app.UseMiddleware<ExceptionMiddleware>();
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()

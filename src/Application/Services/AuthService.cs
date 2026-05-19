@@ -1,4 +1,5 @@
 using SchoolMaster.Application.DTOs;
+using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Domain.CustomException;
@@ -9,18 +10,24 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IJwtService _jwtService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AuthService(IUserRepository userRepository, IJwtService jwtService)
+    public AuthService(
+        IUserRepository userRepository,
+        IJwtService jwtService,
+        IHttpContextAccessor httpContextAccessor)
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<BaseResponse<AuthResponse>> LoginAsync(LoginRequest request)
     {
         // 1. Find the user in the database using their email.
         // The IUserRepository tool helps us do this.
-        var user = await _userRepository.GetUserByEmailAsync(request.Email);
+        // We must now find the user by email AND the resolved tenantId.
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantIdFromSubdomain.Value);
 
         // If no user is found with that email, it means the email is wrong.
         if (user == null)

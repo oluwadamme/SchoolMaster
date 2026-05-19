@@ -1,3 +1,5 @@
+namespace SchoolMaster.Infrastructure.Repositories;
+
 using Microsoft.EntityFrameworkCore;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Infrastructure.Persistence;
@@ -22,6 +24,12 @@ public class UserRepository : IUserRepository
     public async Task<bool> ExistsByEmailAsync(string email)
     {
         return await _context.Users.IgnoreQueryFilters().AnyAsync(x => x.Email == email);
+    }
+
+    public async Task<bool> ExistsByEmailAndTenantIdAsync(string email, Guid tenantId)
+    {
+        return await _context.Users.IgnoreQueryFilters()
+            .AnyAsync(x => x.Email == email && x.TenantId == tenantId);
     }
 
     public async Task<User?> GetUserByEmailAsync(string email)

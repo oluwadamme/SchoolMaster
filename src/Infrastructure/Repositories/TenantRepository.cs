@@ -1,3 +1,5 @@
+namespace SchoolMaster.Infrastructure.Repositories;
+
 using System;
 using Microsoft.EntityFrameworkCore;
 using SchoolMaster.Application.Repositories;
@@ -22,5 +24,11 @@ public class TenantRepository : ITenantRepository
     public async Task<bool> ExistsBySubdomainAsync(string subdomain)
     {
         return await _context.Tenants.IgnoreQueryFilters().AnyAsync(x => x.Subdomain == subdomain);
+    }
+
+    public async Task<Tenant?> GetTenantBySubdomainAsync(string subdomain)
+    {
+        return await _context.Tenants.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.Subdomain == subdomain);
     }
 }
