@@ -85,6 +85,8 @@ public class OnboardingService : IOnboardingService
         await _userRepository.AddUserAsync(adminUser);
 
         // 4. Send email verification otp
+        // adds email service job to the queue
+
 
         _backgroundJobClient.Enqueue<IEmailService>(x =>
         x.SendEmailAsync(request.AdminEmail, request.AdminFirstName, subject, body));

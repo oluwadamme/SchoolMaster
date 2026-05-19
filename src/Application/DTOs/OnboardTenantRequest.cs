@@ -15,6 +15,7 @@ public class OnboardTenantRequest
     public required string AdminEmail { get; set; }
     public required string AdminPassword { get; set; }
 }
+//the name of the validator class and reference to the class it's validating
 public class OnboardTenantRequestValidator : AbstractValidator<OnboardTenantRequest>
 {
     public OnboardTenantRequestValidator()
