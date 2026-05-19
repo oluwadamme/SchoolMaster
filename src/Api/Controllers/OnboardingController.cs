@@ -2,6 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolMaster.Application.DTOs;
 using SchoolMaster.Application.Services.Interfaces;
+using Microsoft.AspNetCore.RateLimiting;
+
+namespace SchoolMaster.Api.Controllers;
 
 //“Create my school and make me the admin”
 [ApiController]
@@ -22,6 +25,7 @@ public class OnboardingController : ControllerBase
         return CreatedAtAction(nameof(OnboardTenant), new { id = result.Data }, result);
     }
 
+    [EnableRateLimiting("AuthLimit")]
     [HttpPost("verify-email")]
     public async Task<ActionResult> VerifyUserEmail([FromBody] VerifyUserEmailRequest request)
     {
@@ -29,6 +33,7 @@ public class OnboardingController : ControllerBase
         return Ok(result);
     }
 
+    [EnableRateLimiting("AuthLimit")]
     [HttpPost("resend-verification-otp")]
     public async Task<ActionResult> ResendVerificationOtp([FromBody] ResendOtpRequest request)
     {
@@ -36,5 +41,20 @@ public class OnboardingController : ControllerBase
         return Ok(result);
     }
 
+    [EnableRateLimiting("AuthLimit")]
+    [HttpPost("forgot-password")]
+    public async Task<ActionResult> ForgotPassword([FromBody] ForgetPasswordRequest request)
+    {
+        var result = await _onboardingService.ForgotPasswordAsync(request);
+        return Ok(result);
+    }
+
+    [EnableRateLimiting("AuthLimit")]
+    [HttpPost("reset-password")]
+    public async Task<ActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        var result = await _onboardingService.ResetPasswordAsync(request);
+        return Ok(result);
+    }
 
 }

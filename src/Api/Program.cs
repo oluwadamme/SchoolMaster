@@ -143,7 +143,7 @@ try
             }
         }
     }
-
+    app.UseMiddleware<TenantResolverMiddleware>();
     app.UseMiddleware<ExceptionMiddleware>();
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()

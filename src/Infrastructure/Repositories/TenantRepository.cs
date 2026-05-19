@@ -23,4 +23,9 @@ public class TenantRepository : ITenantRepository
     {
         return await _context.Tenants.IgnoreQueryFilters().AnyAsync(x => x.Subdomain == subdomain);
     }
+
+    public async Task<Tenant?> GetTenantBySubdomainAsync(string subdomain)
+    {
+        return await _context.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Subdomain == subdomain);
+    }
 }
