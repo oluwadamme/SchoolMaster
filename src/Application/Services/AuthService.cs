@@ -3,6 +3,10 @@ using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Domain.CustomException;
+using Serilog;
+using Hangfire;
+using Microsoft.Extensions.Options;
+using SchoolMaster.Infrastructure.Options;
 
 namespace SchoolMaster.Application.Services;
 
@@ -10,6 +14,7 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IJwtService _jwtService;
+<<<<<<< HEAD
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public AuthService(
@@ -20,6 +25,21 @@ public class AuthService : IAuthService
         _userRepository = userRepository;
         _jwtService = jwtService;
         _httpContextAccessor = httpContextAccessor;
+=======
+    private readonly IBackgroundJobClient _backgroundJobClient;
+    private readonly IOptions<EmailVerificationOptions> _emailOptions;
+    private readonly ICurrentTenant _currentTenant;
+    private readonly IOtpService _otpService;
+
+    public AuthService(IUserRepository userRepository, IJwtService jwtService, IBackgroundJobClient backgroundJobClient, IOptions<EmailVerificationOptions> emailOptions, ICurrentTenant currentTenant, IOtpService otpService)
+    {
+        _userRepository = userRepository;
+        _jwtService = jwtService;
+        _backgroundJobClient = backgroundJobClient;
+        _emailOptions = emailOptions;
+        _currentTenant = currentTenant;
+        _otpService = otpService;
+>>>>>>> c3b83190ef06c4dfb48c9f0a4d16c9447aaebd0a
     }
 
     public async Task<BaseResponse<AuthResponse>> LoginAsync(LoginRequest request)
@@ -145,5 +165,63 @@ public class AuthService : IAuthService
         await _userRepository.UpdateUserAsync(user);
 
         return BaseResponse<bool>.SuccessResponse("User deactivated successfully.", true);
+    }
+
+    public async Task<BaseResponse<bool>> ForgotPasswordAsync(ForgetPasswordRequest request)
+    {
+        // 1. Get the TenantId automatically from our abstraction!
+        var tenantId = _currentTenant.Id;
+        if (tenantId == Guid.Empty)
+        {
+            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+
+            return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
+        }
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
+        if (user == null)
+        {
+            Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
+        }
+        var otp = _otpService.GenerateVerificationOtp();
+        var subject = "Forgot your password";
+        var body = $"Hello {user.FirstName},\n\nForgot your password? Use the code below to reset it:\n\n{otp}\n\nRegards,\n\nSchoolMaster Team";
+
+        user.OtpToken = otp;
+        user.OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes);
+        user.UpdatedAt = DateTime.UtcNow;
+        await _userRepository.UpdateUserAsync(user);
+
+        _backgroundJobClient.Enqueue<IEmailService>(x =>
+        x.SendEmailAsync(user.Email, user.FirstName, subject, body));
+
+        return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
+    }
+
+    public async Task<BaseResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        var tenantId = _currentTenant.Id;
+        if (tenantId == Guid.Empty)
+        {
+            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+
+            throw new InvalidOtpException("Invalid OTP or Email address.");
+        }
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, _currentTenant.Id);
+        if (user == null || user.OtpToken != request.Otp)
+        {
+            Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            throw new InvalidOtpException("Invalid OTP or Email address.");
+        }
+        if (user.OtpExpiry < DateTime.UtcNow)
+        {
+            throw new OtpExpiredException("OTP has expired. Please request a new one.");
+        }
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+        user.OtpToken = null;
+        user.OtpExpiry = null;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _userRepository.UpdateUserAsync(user);
+        return BaseResponse<bool>.SuccessResponse("Password reset successfully", true);
     }
 }

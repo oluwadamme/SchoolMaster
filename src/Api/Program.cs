@@ -52,6 +52,11 @@ try
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IJwtService, JwtService>();
+<<<<<<< HEAD
+=======
+    builder.Services.AddScoped<IOtpService, OtpService>();
+
+>>>>>>> c3b83190ef06c4dfb48c9f0a4d16c9447aaebd0a
 
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
@@ -110,6 +115,8 @@ try
 
     builder.Services.AddSwaggerGen(options =>
     {
+        options.OperationFilter<SchoolMaster.Api.Swagger.TenantHeaderOperationFilter>();
+
         options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
         {
             Name = "Authorization",
@@ -150,8 +157,12 @@ try
             }
         }
     }
+<<<<<<< HEAD
 
      // MUST be before UseAuthentication
+=======
+    app.UseMiddleware<TenantResolverMiddleware>();
+>>>>>>> c3b83190ef06c4dfb48c9f0a4d16c9447aaebd0a
     app.UseMiddleware<ExceptionMiddleware>();
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()

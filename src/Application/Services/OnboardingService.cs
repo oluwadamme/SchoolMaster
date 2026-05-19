@@ -4,12 +4,13 @@ using SchoolMaster.Application.Repositories;
 using SchoolMaster.Domain.Entities;
 using SchoolMaster.Domain.Enums;
 using SchoolMaster.Application.DTOs;
-
+using Serilog;
 using Microsoft.Extensions.Options;
 using SchoolMaster.Infrastructure.Options;
 using Hangfire;
 using System.Security.Cryptography;
 using SchoolMaster.Domain.CustomException;
+using System.Transactions;
 
 namespace SchoolMaster.Application.Services;
 
@@ -19,17 +20,24 @@ public class OnboardingService : IOnboardingService
     private readonly IUserRepository _userRepository;
     private readonly IOptions<EmailVerificationOptions> _emailOptions;
     private readonly IBackgroundJobClient _backgroundJobClient;
+    private readonly ICurrentTenant _currentTenant;
+    private readonly IOtpService _otpService;
 
     public OnboardingService(
         ITenantRepository tenantRepository,
         IUserRepository userRepository,
         IOptions<EmailVerificationOptions> emailOptions,
-        IBackgroundJobClient backgroundJobClient)
+        IBackgroundJobClient backgroundJobClient,
+        ICurrentTenant currentTenant,
+       IOtpService otpService)
     {
         _tenantRepository = tenantRepository;
         _userRepository = userRepository;
         _emailOptions = emailOptions;
         _backgroundJobClient = backgroundJobClient;
+        _currentTenant = currentTenant;
+        _otpService = otpService;
+
     }
 
     public async Task<BaseResponse<Guid>> CreateTenantWithAdminAsync(OnboardTenantRequest request)
@@ -45,7 +53,10 @@ public class OnboardingService : IOnboardingService
             throw new AlreadyExistException("Subdomain already exists.");
         }
 
-        // 2. Create Tenant
+        // Use transaction scope to ensure atomicity
+        using var dbScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+
+        // 2.Create Tenant
         var tenant = new Tenant
         {
             Id = Guid.NewGuid(),
@@ -60,7 +71,7 @@ public class OnboardingService : IOnboardingService
 
         await _tenantRepository.AddTenantAsync(tenant);
 
-        var otp = GenerateVerificationOtp();
+        var otp = _otpService.GenerateVerificationOtp();
         var subject = "Verify your email";
         var body = $"Hello {request.AdminFirstName},\n\nThanks for registering with SchoolMaster!\n\nPlease verify your email by using the code below: {otp}\n\nRegards,\n\nSchoolMaster Team";
 
@@ -84,7 +95,7 @@ public class OnboardingService : IOnboardingService
         };
 
         await _userRepository.AddUserAsync(adminUser);
-
+        dbScope.Complete();
         // 4. Send email verification otp
         // adds email service job to the queue
 
@@ -98,31 +109,20 @@ public class OnboardingService : IOnboardingService
             tenant.Id
         );
     }
-    private string GenerateVerificationOtp()
-    {
-        // generate 4 digit otp, if it is development env, the code will be 0000 else it will generate random code
-        // if (Environment.IsDevelopment())
-        // {
-        //     return "0000";
-        // }
-        var token = RandomNumberGenerator.GetInt32(10000).ToString("D4");
-        return token;
-    }
 
     public async Task<BaseResponse<bool>> VerifyUserEmailAsync(VerifyUserEmailRequest request)
     {
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, request.TenantId);
-        if (user == null)
+        var tenantId = _currentTenant.Id;
+        if (tenantId == Guid.Empty)
         {
-            throw new UserNotFoundException("User not found.");
+            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+
+            throw new InvalidOtpException("Invalid OTP or Email address.");
         }
-        if (user.OtpToken != request.OtpToken)
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
+        if (user == null || user.OtpToken != request.OtpToken || user.OtpExpiry < DateTime.UtcNow)
         {
-            throw new InvalidOtpException("Invalid OTP.");
-        }
-        if (user.OtpExpiry < DateTime.UtcNow)
-        {
-            throw new OtpExpiredException("OTP expired.");
+            throw new InvalidOtpException("Invalid OTP or email address.");
         }
         user.IsEmailVerified = true;
         user.OtpToken = null;
@@ -134,16 +134,25 @@ public class OnboardingService : IOnboardingService
 
     public async Task<BaseResponse<bool>> ResendVerificationOtpAsync(ResendOtpRequest request)
     {
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, request.TenantId);
+        var tenantId = _currentTenant.Id;
+        if (tenantId == Guid.Empty)
+        {
+            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+
+            return BaseResponse<bool>.SuccessResponse("Otp sent successfully", true);
+        }
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
         if (user == null)
         {
-            throw new UserNotFoundException("User not found.");
+            Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            return BaseResponse<bool>.SuccessResponse("Otp sent successfully", true);
         }
         if (user.IsEmailVerified)
         {
-            throw new ArgumentException("Email already verified.");
+            Log.Error("Email already verified for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            return BaseResponse<bool>.SuccessResponse("Email already verified", true);
         }
-        var otp = GenerateVerificationOtp();
+        var otp = _otpService.GenerateVerificationOtp();
         var subject = "Verify your email";
         var body = $"Hello {user.FirstName},\n\nThanks for registering with SchoolMaster!\n\nPlease verify your email by using the code below: {otp}\n\nRegards,\n\nSchoolMaster Team";
 
@@ -157,4 +166,5 @@ public class OnboardingService : IOnboardingService
 
         return BaseResponse<bool>.SuccessResponse("Verification token resent successfully", true);
     }
+
 }
