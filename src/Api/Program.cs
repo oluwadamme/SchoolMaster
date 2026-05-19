@@ -48,7 +48,9 @@ try
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IJwtService, JwtService>();
+    builder.Services.AddScoped<IJwtService, JwtService>();
+    builder.Services.AddScoped<IOtpService, OtpService>();
+
 
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));

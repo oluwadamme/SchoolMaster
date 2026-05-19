@@ -41,20 +41,5 @@ public class OnboardingController : ControllerBase
         return Ok(result);
     }
 
-    [EnableRateLimiting("AuthLimit")]
-    [HttpPost("forgot-password")]
-    public async Task<ActionResult> ForgotPassword([FromBody] ForgetPasswordRequest request)
-    {
-        var result = await _onboardingService.ForgotPasswordAsync(request);
-        return Ok(result);
-    }
-
-    [EnableRateLimiting("AuthLimit")]
-    [HttpPost("reset-password")]
-    public async Task<ActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
-    {
-        var result = await _onboardingService.ResetPasswordAsync(request);
-        return Ok(result);
-    }
 
 }
