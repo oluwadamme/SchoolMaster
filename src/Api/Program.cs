@@ -55,8 +55,6 @@ try
     builder.Services.AddScoped<IJwtService, JwtService>();
     builder.Services.AddScoped<IOtpService, OtpService>();
 
-
-
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
     builder.Services.Configure<EmailVerificationOptions>(builder.Configuration.GetSection("EmailVerification"));
     builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("EmailSettings"));
