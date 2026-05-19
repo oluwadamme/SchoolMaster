@@ -2,11 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using SchoolMaster.Application.DTOs;
 using SchoolMaster.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-
+using Microsoft.AspNetCore.RateLimiting;
 namespace SchoolMaster.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/auth")]
+[Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -48,6 +48,23 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<BaseResponse<bool>>> DeactivateByEmail([FromBody] DeactivateUserByEmailRequest request)
     {
         var result = await _authService.DeactivateUserByEmailAsync(request.Email, _currentTenant.Id);
+        return Ok(result);
+    }
+
+
+    [EnableRateLimiting("AuthLimit")]
+    [HttpPost("forgot-password")]
+    public async Task<ActionResult> ForgotPassword([FromBody] ForgetPasswordRequest request)
+    {
+        var result = await _authService.ForgotPasswordAsync(request);
+        return Ok(result);
+    }
+
+    [EnableRateLimiting("AuthLimit")]
+    [HttpPost("reset-password")]
+    public async Task<ActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        var result = await _authService.ResetPasswordAsync(request);
         return Ok(result);
     }
 

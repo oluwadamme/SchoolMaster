@@ -36,3 +36,26 @@ Accept: application/json
 {
   "email": "susanojone@gmail.com"
 }
+
+### forgot password
+POST {{SchoolMaster_HostAddress}}/api/onboarding/forgot-password
+Content-Type: application/json
+Accept: application/json
+# X-Tenant-Subdomain: susie.academy.edu
+
+{
+  "email": "susanojone@gmail.com"
+}
+
+### reset password
+POST {{SchoolMaster_HostAddress}}/api/onboarding/reset-password
+Content-Type: application/json
+Accept: application/json
+X-Tenant-Subdomain: susie.academy.edu
+
+{
+  "email": "susanojone@gmail.com",
+  "otp": "0000",
+  "password": "NewSecurePassword123!"
+}
+

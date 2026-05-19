@@ -48,7 +48,9 @@ try
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IJwtService, JwtService>();
+    builder.Services.AddScoped<IJwtService, JwtService>();
+    builder.Services.AddScoped<IOtpService, OtpService>();
+
 
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
@@ -107,6 +109,8 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 
     builder.Services.AddSwaggerGen(options =>
     {
+        options.OperationFilter<SchoolMaster.Api.Swagger.TenantHeaderOperationFilter>();
+
         options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
         {
             Name = "Authorization",
@@ -147,7 +151,7 @@ builder.Services.AddScoped<IJwtService, JwtService>();
             }
         }
     }
-
+    app.UseMiddleware<TenantResolverMiddleware>();
     app.UseMiddleware<ExceptionMiddleware>();
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()
