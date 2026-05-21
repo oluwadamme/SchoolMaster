@@ -305,7 +305,7 @@ docker compose up --build -d api
 - [x] Hangfire background jobs for notifications
 - [ ] Attendance domain events → notification pipeline
 - [ ] Unit and integration tests with Testcontainers
-- [ ] Docker + docker-compose with PostgreSQL and Redis
+- [x] Docker + docker-compose with PostgreSQL and Redis
 - [ ] GitHub Actions CI/CD
 - [ ] Audit log — queryable history of all write operations
 - [ ] Timetable conflict detection — automatic validation before saving
