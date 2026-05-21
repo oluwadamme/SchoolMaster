@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace SchoolMaster.Api.Controllers;
 
-//“Create my school and make me the admin”
 [ApiController]
 [Route("api/v1/[controller]")]
 public class OnboardingController : ControllerBase
@@ -19,7 +18,7 @@ public class OnboardingController : ControllerBase
     }
     [EnableRateLimiting("AuthLimit")]
     [HttpPost("tenants")]
-    public async Task<ActionResult> OnboardTenant([FromBody] OnboardTenantRequest request)
+    public async Task<ActionResult<BaseResponse<Guid>>> OnboardTenant([FromBody] OnboardTenantRequest request)
     {
         var result = await _onboardingService.CreateTenantWithAdminAsync(request);
         return CreatedAtAction(nameof(OnboardTenant), new { id = result.Data }, result);
@@ -27,7 +26,7 @@ public class OnboardingController : ControllerBase
 
     [EnableRateLimiting("AuthLimit")]
     [HttpPost("verify-email")]
-    public async Task<ActionResult> VerifyUserEmail([FromBody] VerifyUserEmailRequest request)
+    public async Task<ActionResult<BaseResponse<bool>>> VerifyUserEmail([FromBody] VerifyUserEmailRequest request)
     {
         var result = await _onboardingService.VerifyUserEmailAsync(request);
         return Ok(result);
@@ -35,7 +34,7 @@ public class OnboardingController : ControllerBase
 
     [EnableRateLimiting("AuthLimit")]
     [HttpPost("resend-verification-otp")]
-    public async Task<ActionResult> ResendVerificationOtp([FromBody] ResendOtpRequest request)
+    public async Task<ActionResult<BaseResponse<bool>>> ResendVerificationOtp([FromBody] ResendOtpRequest request)
     {
         var result = await _onboardingService.ResendVerificationOtpAsync(request);
         return Ok(result);

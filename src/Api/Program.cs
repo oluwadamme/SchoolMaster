@@ -86,17 +86,24 @@ try
         }
     );
     builder.Services.AddScoped<IAuthorizationHandler, HasPermissionHandler>();
-    var dataSourceBuilder = new NpgsqlDataSourceBuilder(
-    builder.Configuration.GetConnectionString("DefaultConnection"));
-    dataSourceBuilder.ConfigureJsonOptions(new JsonSerializerOptions
+
+    // Registered as a singleton factory so it is built lazily at first resolve —
+    // after the DI container is fully configured. This lets WebApplicationFactory
+    // swap it out with a Testcontainers data source before any test runs.
+    builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
     {
-        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+        var connectionString = sp.GetRequiredService<IConfiguration>()
+            .GetConnectionString("DefaultConnection");
+        var dsBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dsBuilder.ConfigureJsonOptions(new JsonSerializerOptions
+        {
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+        });
+        return dsBuilder.Build();
     });
 
-    var dataSource = dataSourceBuilder.Build();
-
-    builder.Services.AddDbContext<SchoolMasterContext>(options =>
-        options.UseNpgsql(dataSource));
+    builder.Services.AddDbContext<SchoolMasterContext>((sp, options) =>
+        options.UseNpgsql(sp.GetRequiredService<NpgsqlDataSource>()));
 
     builder.Services.AddRateLimiter(options =>
         {
@@ -201,3 +208,6 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// Required so WebApplicationFactory<Program> in integration tests can access this type.
+public partial class Program { }

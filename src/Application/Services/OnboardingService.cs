@@ -124,6 +124,7 @@ public class OnboardingService : IOnboardingService
             throw new InvalidOtpException("Invalid OTP or email address.");
         }
         user.IsEmailVerified = true;
+        user.Status = UserStatus.Active;
         user.OtpToken = null;
         user.OtpExpiry = null;
         user.UpdatedAt = DateTime.UtcNow;

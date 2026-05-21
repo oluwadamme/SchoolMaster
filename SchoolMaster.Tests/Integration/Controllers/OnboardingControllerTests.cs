@@ -6,7 +6,7 @@ using Xunit;
 namespace SchoolMaster.Tests.Integration.Controllers;
 
 /// <summary>
-/// Integration tests for /api/onboarding endpoints.
+/// Integration tests for /api/v1/onboarding endpoints.
 /// Each test seeds its own unique tenant so tests run independently.
 /// </summary>
 [Collection("Integration")]
@@ -45,7 +45,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
     private async Task<(string Subdomain, Guid TenantId, string AdminEmail)> SeedTenantAsync()
     {
         var req = MakeUniqueRequest();
-        var response = await _client.PostAsJsonAsync("/api/onboarding/tenants", req);
+        var response = await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req);
         response.EnsureSuccessStatusCode();
 
         var body = await response.Content.ReadFromJsonAsync<BaseResponse<Guid>>();
@@ -60,7 +60,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
     }
 
     // -------------------------------------------------------------------------
-    // POST /api/onboarding/tenants
+    // POST /api/v1/onboarding/tenants
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -68,7 +68,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
     {
         var req = MakeUniqueRequest();
 
-        var response = await _client.PostAsJsonAsync("/api/onboarding/tenants", req);
+        var response = await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<BaseResponse<Guid>>();
@@ -80,7 +80,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
     public async Task RegisterTenant_WithDuplicateAdminEmail_Returns409()
     {
         var req = MakeUniqueRequest();
-        await _client.PostAsJsonAsync("/api/onboarding/tenants", req); // first registration
+        await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req); // first registration
 
         // Same adminEmail but different subdomain
         var uniquePart = Guid.NewGuid().ToString("N")[..10];
@@ -95,7 +95,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
             AdminPassword = req.AdminPassword,
         };
 
-        var response = await _client.PostAsJsonAsync("/api/onboarding/tenants", req2);
+        var response = await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req2);
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -104,7 +104,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
     public async Task RegisterTenant_WithDuplicateSubdomain_Returns409()
     {
         var req = MakeUniqueRequest();
-        await _client.PostAsJsonAsync("/api/onboarding/tenants", req); // first registration
+        await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req); // first registration
 
         var uniquePart = Guid.NewGuid().ToString("N")[..10];
         var req2 = new OnboardTenantRequest
@@ -118,7 +118,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
             AdminPassword = req.AdminPassword,
         };
 
-        var response = await _client.PostAsJsonAsync("/api/onboarding/tenants", req2);
+        var response = await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req2);
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -126,7 +126,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
     [Fact]
     public async Task RegisterTenant_WithMissingRequiredFields_Returns400()
     {
-        var response = await _client.PostAsJsonAsync("/api/onboarding/tenants", new
+        var response = await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", new
         {
             // schoolName, subdomain, and password deliberately omitted
             adminEmail = "bad",
@@ -147,13 +147,13 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
             AdminPassword = "weak", // fails complexity rules
         };
 
-        var response = await _client.PostAsJsonAsync("/api/onboarding/tenants", req);
+        var response = await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     // -------------------------------------------------------------------------
-    // POST /api/onboarding/verify-email
+    // POST /api/v1/onboarding/verify-email
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -161,7 +161,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
     {
         var (subdomain, tenantId, adminEmail) = await SeedTenantAsync();
 
-        var request = BuildRequest(HttpMethod.Post, "/api/onboarding/verify-email",
+        var request = BuildRequest(HttpMethod.Post, "/api/v1/onboarding/verify-email",
             new VerifyUserEmailRequest { Email = adminEmail, OtpToken = SchoolMasterWebApplicationFactory.FixedOtp, TenantId = tenantId },
             subdomain);
 
@@ -178,7 +178,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
     {
         var (subdomain, tenantId, adminEmail) = await SeedTenantAsync();
 
-        var request = BuildRequest(HttpMethod.Post, "/api/onboarding/verify-email",
+        var request = BuildRequest(HttpMethod.Post, "/api/v1/onboarding/verify-email",
             new VerifyUserEmailRequest { Email = adminEmail, OtpToken = "9999", TenantId = tenantId },
             subdomain);
 
@@ -193,14 +193,14 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
         var (_, tenantId, adminEmail) = await SeedTenantAsync();
 
         // No X-Tenant-Subdomain header — ICurrentTenant.Id will be Guid.Empty
-        var response = await _client.PostAsJsonAsync("/api/onboarding/verify-email",
+        var response = await _client.PostAsJsonAsync("/api/v1/onboarding/verify-email",
             new VerifyUserEmailRequest { Email = adminEmail, OtpToken = SchoolMasterWebApplicationFactory.FixedOtp, TenantId = tenantId });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     // -------------------------------------------------------------------------
-    // POST /api/onboarding/resend-verification-otp
+    // POST /api/v1/onboarding/resend-verification-otp
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -208,7 +208,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
     {
         var (subdomain, _, adminEmail) = await SeedTenantAsync();
 
-        var request = BuildRequest(HttpMethod.Post, "/api/onboarding/resend-verification-otp",
+        var request = BuildRequest(HttpMethod.Post, "/api/v1/onboarding/resend-verification-otp",
             new ResendOtpRequest { Email = adminEmail },
             subdomain);
 
@@ -223,7 +223,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
         var (subdomain, _, _) = await SeedTenantAsync();
 
         // Service silently succeeds to avoid user enumeration
-        var request = BuildRequest(HttpMethod.Post, "/api/onboarding/resend-verification-otp",
+        var request = BuildRequest(HttpMethod.Post, "/api/v1/onboarding/resend-verification-otp",
             new ResendOtpRequest { Email = "nobody@test.com" },
             subdomain);
 
@@ -235,7 +235,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
     [Fact]
     public async Task ResendOtp_WithInvalidEmailFormat_Returns400()
     {
-        var response = await _client.PostAsJsonAsync("/api/onboarding/resend-verification-otp",
+        var response = await _client.PostAsJsonAsync("/api/v1/onboarding/resend-verification-otp",
             new ResendOtpRequest { Email = "not-an-email" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

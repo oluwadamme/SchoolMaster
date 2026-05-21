@@ -74,7 +74,7 @@ public class OnboardingServiceTests
             t.Status == TenantStatus.Active && t.Plan == TenantPlan.Basic)), Times.Once);
 
         _userRepo.Verify(r => r.AddUserAsync(It.Is<User>(u =>
-            u.Role == UserRole.Admin && !u.IsEmailVerified && u.OtpToken == "1234")), Times.Once);
+            u.Roles.Contains(UserRole.Admin) && !u.IsEmailVerified && u.OtpToken == "1234")), Times.Once);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class OnboardingServiceTests
         var user = new User
         {
             Id = Guid.NewGuid(), TenantId = tenantId, FirstName = "A", LastName = "B",
-            Email = "a@test.com", PasswordHash = "h", Role = UserRole.Admin,
+            Email = "a@test.com", PasswordHash = "h", Roles = [UserRole.Admin],
             OtpToken = "1234", OtpExpiry = DateTime.UtcNow.AddMinutes(15),
             IsEmailVerified = false,
         };
@@ -179,7 +179,7 @@ public class OnboardingServiceTests
         var user = new User
         {
             Id = Guid.NewGuid(), TenantId = tenantId, FirstName = "A", LastName = "B",
-            Email = "a@test.com", PasswordHash = "h", Role = UserRole.Admin,
+            Email = "a@test.com", PasswordHash = "h", Roles = [UserRole.Admin],
             OtpToken = "correct", OtpExpiry = DateTime.UtcNow.AddMinutes(15),
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
@@ -199,7 +199,7 @@ public class OnboardingServiceTests
         var user = new User
         {
             Id = Guid.NewGuid(), TenantId = tenantId, FirstName = "A", LastName = "B",
-            Email = "a@test.com", PasswordHash = "h", Role = UserRole.Admin,
+            Email = "a@test.com", PasswordHash = "h", Roles = [UserRole.Admin],
             OtpToken = "1234", OtpExpiry = DateTime.UtcNow.AddMinutes(-5), // expired
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
@@ -225,7 +225,7 @@ public class OnboardingServiceTests
         var user = new User
         {
             Id = Guid.NewGuid(), TenantId = tenantId, FirstName = "A", LastName = "B",
-            Email = "a@test.com", PasswordHash = "h", Role = UserRole.Admin,
+            Email = "a@test.com", PasswordHash = "h", Roles = [UserRole.Admin],
             IsEmailVerified = false, OtpToken = "old-otp",
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
@@ -272,7 +272,7 @@ public class OnboardingServiceTests
         var user = new User
         {
             Id = Guid.NewGuid(), TenantId = tenantId, FirstName = "A", LastName = "B",
-            Email = "a@test.com", PasswordHash = "h", Role = UserRole.Admin,
+            Email = "a@test.com", PasswordHash = "h", Roles = [UserRole.Admin],
             IsEmailVerified = true,
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
