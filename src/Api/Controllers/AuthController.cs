@@ -3,10 +3,12 @@ using SchoolMaster.Application.DTOs;
 using SchoolMaster.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
+using SchoolMaster.Api.Authorization;
+using SchoolMaster.Domain.Enums;
 namespace SchoolMaster.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -18,7 +20,7 @@ public class AuthController : ControllerBase
         _authService = authService;
         _currentTenant = currentTenant;
     }
-
+    [EnableRateLimiting("AuthLimit")]
     [HttpPost("login")]
     public async Task<ActionResult<BaseResponse<AuthResponse>>> Login([FromBody] LoginRequest request)
     {
@@ -27,7 +29,7 @@ public class AuthController : ControllerBase
         // If the login worked, we send the token and a 200 (OK) status code.
         return Ok(response);
     }
-
+    [EnableRateLimiting("AuthLimit")]
     [HttpPost("refresh-token")]
     public async Task<ActionResult<BaseResponse<AuthResponse>>> RefreshToken([FromBody] RefreshTokenRequest request)
     {
@@ -40,11 +42,12 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
-      /// <summary>
+    /// <summary>
     /// Deactivates a user account using their email address.
     /// </summary>
+    [HasPermission(Permission.UsersDeactivate)]
+    [EnableRateLimiting("AuthLimit")]
     [HttpPatch("users/deactivate-by-email")]
-    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<BaseResponse<bool>>> DeactivateByEmail([FromBody] DeactivateUserByEmailRequest request)
     {
         var result = await _authService.DeactivateUserByEmailAsync(request.Email, _currentTenant.Id);

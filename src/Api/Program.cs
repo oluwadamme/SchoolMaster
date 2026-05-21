@@ -16,7 +16,11 @@ using Hangfire.PostgreSql;
 using SchoolMaster.Infrastructure.Persistence;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Application.DTOs;
-
+using SchoolMaster.Api.Authorization;
+using SchoolMaster.Domain.Enums;
+using Microsoft.AspNetCore.Authorization;
+using Npgsql;
+using System.Text.Json;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -41,10 +45,7 @@ try
     // 1. Tell ASP.NET Core to auto-validate requests using FluentValidation
     builder.Services.AddFluentValidationAutoValidation();
     // 2. Tell DI to scan your project and register RegisterRequestValidator (and any others you make)
-    builder.Services.AddValidatorsFromAssemblyContaining<DeactivateUserByEmailRequestValidator>();
-    builder.Services.AddValidatorsFromAssemblyContaining<OnboardTenantRequestValidator>();
-    builder.Services.AddValidatorsFromAssemblyContaining<VerifyUserEmailRequestValidator>();
-    builder.Services.AddValidatorsFromAssemblyContaining<ResendOtpRequestValidator>();
+    builder.Services.AddValidatorsFromAssembly(typeof(OnboardTenantRequestValidator).Assembly);
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
@@ -73,10 +74,30 @@ try
                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
            };
        });
-    builder.Services.AddAuthorization();
+    builder.Services.AddAuthorization(
+        options =>
+        {
+            // Dynamically create a policy for each permission in the Permission enum
+            foreach (var permission in Enum.GetValues<Permission>())
+            {
+                options.AddPolicy(permission.ToString(), policy =>
+                    policy.AddRequirements(new HasPermissionRequirement(permission)));
+            }
+        }
+    );
+    builder.Services.AddScoped<IAuthorizationHandler, HasPermissionHandler>();
+    var dataSourceBuilder = new NpgsqlDataSourceBuilder(
+    builder.Configuration.GetConnectionString("DefaultConnection"));
+    dataSourceBuilder.ConfigureJsonOptions(new JsonSerializerOptions
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+    });
+
+    var dataSource = dataSourceBuilder.Build();
 
     builder.Services.AddDbContext<SchoolMasterContext>(options =>
-        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+        options.UseNpgsql(dataSource));
+
     builder.Services.AddRateLimiter(options =>
         {
             // If they get blocked, send back a 429 Too Many Requests

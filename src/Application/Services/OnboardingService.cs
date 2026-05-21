@@ -85,7 +85,7 @@ public class OnboardingService : IOnboardingService
             LastName = request.AdminLastName,
             Email = request.AdminEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.AdminPassword),
-            Role = UserRole.Admin,
+            Roles = new List<UserRole> { UserRole.Admin },
             IsEmailVerified = false,
             OtpToken = otp,
             OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes),

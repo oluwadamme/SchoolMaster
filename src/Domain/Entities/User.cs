@@ -9,9 +9,9 @@ public class User
     public string LastName { get; set; }
     public string Email { get; set; }
     public string PasswordHash { get; set; }
-    public UserRole Role { get; set; }
+    public List<UserRole> Roles { get; set; } = new();
 
-    public UserStatus Status { get; private set; } = UserStatus.Active;
+    public UserStatus Status { get; set; } = UserStatus.PendingVerification;
     public bool IsEmailVerified { get; set; }
     public string? RefreshToken { get; private set; } // only code inside the user class can change it. Other parts of the program would have to User class methods to update it
     public DateTime? RefreshTokenExpiry { get; private set; } //store data and time when refresh token will expire

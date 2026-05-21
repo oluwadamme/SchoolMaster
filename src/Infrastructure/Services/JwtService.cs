@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Domain.Entities;
 using SchoolMaster.Infrastructure.Options;
+using SchoolMaster.Domain.Authorization;
 
 namespace SchoolMaster.Infrastructure.Services;
 
@@ -33,9 +34,22 @@ public class JwtService : IJwtService
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.GivenName, user.FirstName),
             new Claim(ClaimTypes.Surname, user.LastName),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
             new Claim("tenant_id", user.TenantId.ToString()) // Important for multi-tenancy!
         };
+
+        foreach (var role in user.Roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role.ToString()));
+        }
+
+
+        var permissions = user.Roles
+            .SelectMany(role => RolePermissions.For(role))
+            .Distinct();
+        foreach (var permission in permissions)
+        {
+            claims.Add(new Claim(PermissionClaimType.Type, permission.ToString()));
+        }
 
         // 3. Describe the token (who made it, who it's for, how long it lasts).
         var tokenDescriptor = new SecurityTokenDescriptor

@@ -8,7 +8,7 @@ namespace SchoolMaster.Api.Controllers;
 
 //“Create my school and make me the admin”
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 public class OnboardingController : ControllerBase
 {
     private readonly IOnboardingService _onboardingService;
@@ -17,7 +17,7 @@ public class OnboardingController : ControllerBase
     {
         _onboardingService = onboardingService;
     }
-
+    [EnableRateLimiting("AuthLimit")]
     [HttpPost("tenants")]
     public async Task<ActionResult> OnboardTenant([FromBody] OnboardTenantRequest request)
     {
