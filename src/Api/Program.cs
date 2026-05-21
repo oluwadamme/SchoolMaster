@@ -161,7 +161,7 @@ try
     app.UseAuthentication();   // ← BEFORE authorization
     app.UseAuthorization();    // ← AFTER authentication
                                // Configure the HTTP request pipeline.
-    app.UseRateLimiter();
+    if (!isTesting) app.UseRateLimiter();
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
