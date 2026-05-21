@@ -6,13 +6,12 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Infrastructure.Persistence;
 using SchoolMaster.Tests.Integration.Helpers;
 using Testcontainers.PostgreSql;
 using Xunit;
-
+using Moq;
 namespace SchoolMaster.Tests.Integration;
 
 /// <summary>

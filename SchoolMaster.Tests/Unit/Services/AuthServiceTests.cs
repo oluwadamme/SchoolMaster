@@ -3,7 +3,6 @@ using Hangfire;
 using Hangfire.Common;
 using Hangfire.States;
 using Microsoft.Extensions.Options;
-using Moq;
 using SchoolMaster.Application.DTOs;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Application.Services;
@@ -13,6 +12,7 @@ using SchoolMaster.Domain.Entities;
 using SchoolMaster.Domain.Enums;
 using SchoolMaster.Infrastructure.Options;
 using Xunit;
+using Moq;  
 
 namespace SchoolMaster.Tests.Unit.Services;
 
