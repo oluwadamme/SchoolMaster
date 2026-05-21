@@ -1,7 +1,6 @@
 using SchoolMaster.Application.DTOs;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Application.Repositories;
-using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Domain.CustomException;
 using Serilog;
 using Hangfire;
@@ -14,40 +13,46 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IJwtService _jwtService;
-<<<<<<< HEAD
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AuthService(
-        IUserRepository userRepository,
-        IJwtService jwtService,
-        IHttpContextAccessor httpContextAccessor)
-    {
-        _userRepository = userRepository;
-        _jwtService = jwtService;
-        _httpContextAccessor = httpContextAccessor;
-=======
+
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly IOptions<EmailVerificationOptions> _emailOptions;
     private readonly ICurrentTenant _currentTenant;
     private readonly IOtpService _otpService;
 
-    public AuthService(IUserRepository userRepository, IJwtService jwtService, IBackgroundJobClient backgroundJobClient, IOptions<EmailVerificationOptions> emailOptions, ICurrentTenant currentTenant, IOtpService otpService)
+    public AuthService(
+        IUserRepository userRepository, 
+        IJwtService jwtService, 
+        IHttpContextAccessor httpContextAccessor,
+        IBackgroundJobClient backgroundJobClient, 
+        IOptions<EmailVerificationOptions> emailOptions, 
+        ICurrentTenant currentTenant, 
+        IOtpService otpService)
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
+        _httpContextAccessor = httpContextAccessor;
         _backgroundJobClient = backgroundJobClient;
         _emailOptions = emailOptions;
         _currentTenant = currentTenant;
         _otpService = otpService;
->>>>>>> c3b83190ef06c4dfb48c9f0a4d16c9447aaebd0a
     }
 
     public async Task<BaseResponse<AuthResponse>> LoginAsync(LoginRequest request)
     {
-        // 1. Find the user in the database using their email.
-        // The IUserRepository tool helps us do this.
-        // We must now find the user by email AND the resolved tenantId.
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantIdFromSubdomain.Value);
+        // 1. Retrieve the TenantId found by the Middleware from the X-Tenant-Subdomain header
+        // so it knows the school to check for the login attempt
+        // if two schools have the same email for a user, this will make sure the user can only log in to the correct school.
+        var tenantId = (Guid?)_httpContextAccessor.HttpContext?.Items["TenantId"];
+
+        if (tenantId == null || tenantId == Guid.Empty)
+        {
+            throw new TenantNotFoundException("School identification is missing from the request header.");
+        }
+
+        // 2. Find the user only within THAT specific school
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId.Value);
 
         // If no user is found with that email, it means the email is wrong.
         if (user == null)

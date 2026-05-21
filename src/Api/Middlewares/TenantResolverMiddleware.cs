@@ -31,7 +31,7 @@ public class TenantResolverMiddleware
 
                 if (tenant != null)
                 {
-                    // 3. Store the TenantId in the request scope
+                    // 3. Store the TenantId in the request pocket
                     context.Items["TenantId"] = tenant.Id;
                     Log.Information("Resolved TenantId {TenantId} for subdomain {Subdomain}", tenant.Id, subdomain);
                 }

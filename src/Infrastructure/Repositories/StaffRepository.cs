@@ -19,9 +19,13 @@ public class StaffRepository : IStaffRepository
     public async Task AddStaffAsync(Staff staff)
     {
         await _context.Staff.AddAsync(staff);
-        await _context.SaveChangesAsync();
     }
 
     public async Task<bool> ExistsByStaffNumberAsync(string staffNumber, Guid tenantId) =>
         await _context.Staff.AnyAsync(s => s.StaffNumber == staffNumber && s.TenantId == tenantId);
+
+    public async Task SaveChangesAsync()
+    {
+        await _context.SaveChangesAsync();
+    }
 }

@@ -42,21 +42,20 @@ try
     builder.Services.AddValidatorsFromAssemblyContaining<OnboardTenantRequestValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<VerifyUserEmailRequestValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<ResendOtpRequestValidator>();
+    builder.Services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>(); // Register the new student validator
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
     builder.Services.AddScoped<IStaffService, StaffService>(); // Register the StaffService
+    builder.Services.AddScoped<IStudentService, StudentService>();
     builder.Services.AddScoped<ITenantRepository, TenantRepository>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IStaffRepository, StaffRepository>(); // Register the StaffRepository
+    builder.Services.AddScoped<IStudentRepository, StudentRepository>(); // Register the StudentRepository
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IJwtService, JwtService>();
-<<<<<<< HEAD
-=======
     builder.Services.AddScoped<IOtpService, OtpService>();
-
->>>>>>> c3b83190ef06c4dfb48c9f0a4d16c9447aaebd0a
 
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
@@ -157,13 +156,12 @@ try
             }
         }
     }
-<<<<<<< HEAD
 
-     // MUST be before UseAuthentication
-=======
-    app.UseMiddleware<TenantResolverMiddleware>();
->>>>>>> c3b83190ef06c4dfb48c9f0a4d16c9447aaebd0a
+    // 1. First Aid Station (Catch all errors)
     app.UseMiddleware<ExceptionMiddleware>();
+    // 2. Check-in Desk (Identify the School)
+    app.UseMiddleware<TenantResolverMiddleware>();
+
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()
 

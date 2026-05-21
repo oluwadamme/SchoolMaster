@@ -77,6 +77,9 @@ public class StaffService : IStaffService
 
         await _staffRepository.AddStaffAsync(staff);
 
+        // Atomic save for both User and Staff
+        await _staffRepository.SaveChangesAsync();
+
         var staffResponse = new StaffResponse(
             staff.Id, 
             staff.UserId, 

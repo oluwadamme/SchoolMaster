@@ -30,6 +30,7 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             ArgumentException ex => (HttpStatusCode.BadRequest, ex.Message),
             InvalidCredentialsException ex => (HttpStatusCode.Unauthorized, ex.Message),
             UnauthorizedAccessException ex => (HttpStatusCode.Unauthorized, ex.Message), 
+            TenantNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
             KeyNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
             _ => (HttpStatusCode.InternalServerError,
                                           "An unexpected error occurred")

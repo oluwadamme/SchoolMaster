@@ -9,4 +9,5 @@ public interface IStaffRepository
     Task AddStaffAsync(Staff staff);
     // This checks if a Staff Number is already used in this specific school
     Task<bool> ExistsByStaffNumberAsync(string staffNumber, Guid tenantId);
+    Task SaveChangesAsync();
 }

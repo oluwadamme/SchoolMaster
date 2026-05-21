@@ -42,7 +42,10 @@ public class OnboardTenantRequestValidator : AbstractValidator<OnboardTenantRequ
             .Matches("[0-9]").WithMessage("Password must contain 1 number.")
             .Matches("[!@#$%^&*]").WithMessage("Password must contain 1 special character.");
         RuleFor(x => x.SchoolName).NotEmpty().WithMessage("You must enter a school name.");
-        RuleFor(x => x.Subdomain).NotEmpty().WithMessage("You must enter a subdomain.");
-
+        RuleFor(x => x.Subdomain)
+            .NotEmpty().WithMessage("You must enter a subdomain.")
+            .Matches("^[a-z0-9-]+$").WithMessage("Subdomain can only contain lowercase letters, numbers, and hyphens (no dots or spaces).")
+            .NotEqual("www").WithMessage("This subdomain is reserved.")
+            .NotEqual("api").WithMessage("This subdomain is reserved.");
     }
 }

@@ -10,7 +10,6 @@ using SchoolMaster.Infrastructure.Options;
 using Hangfire;
 using System.Security.Cryptography;
 using SchoolMaster.Domain.CustomException;
-using System.Transactions;
 
 namespace SchoolMaster.Application.Services;
 
@@ -53,9 +52,6 @@ public class OnboardingService : IOnboardingService
             throw new AlreadyExistException("Subdomain already exists.");
         }
 
-        // Use transaction scope to ensure atomicity
-        using var dbScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-
         // 2.Create Tenant
         var tenant = new Tenant
         {
@@ -95,7 +91,10 @@ public class OnboardingService : IOnboardingService
         };
 
         await _userRepository.AddUserAsync(adminUser);
-        dbScope.Complete();
+
+        // Commit Tenant and Admin User together
+        await _tenantRepository.SaveChangesAsync();
+
         // 4. Send email verification otp
         // adds email service job to the queue
 
