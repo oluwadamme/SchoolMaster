@@ -35,7 +35,7 @@ public class UserRepository : IUserRepository
     {
         return await _context.Users
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(x => x.Email == email && x.TenantId == tenantId && x.Status == UserStatus.Active);
+            .FirstOrDefaultAsync(x => x.Email == email && x.TenantId == tenantId);
     }
 
     public async Task<User?> GetUserByIdAsync(Guid userId, Guid tenantId)

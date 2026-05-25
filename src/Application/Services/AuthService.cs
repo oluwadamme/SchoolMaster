@@ -67,7 +67,7 @@ public class AuthService : IAuthService
             user.Email,
             user.FirstName,
             user.LastName,
-            user.Role,
+            user.Roles,
             user.IsEmailVerified
         );
 
@@ -126,7 +126,7 @@ public class AuthService : IAuthService
         await _userRepository.UpdateUserAsync(user);
 
         // 9. Send back the new tokens and user details.
-        var authResponse = new AuthResponse(newAccessToken, newRefreshToken, user.Id, user.TenantId, user.Email, user.FirstName, user.LastName, user.Role, user.IsEmailVerified);
+        var authResponse = new AuthResponse(newAccessToken, newRefreshToken, user.Id, user.TenantId, user.Email, user.FirstName, user.LastName, user.Roles, user.IsEmailVerified);
 
         return BaseResponse<AuthResponse>.SuccessResponse("Token refreshed successfully.", authResponse);
     }

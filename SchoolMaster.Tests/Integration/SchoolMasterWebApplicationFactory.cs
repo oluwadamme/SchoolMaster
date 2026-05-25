@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Infrastructure.Persistence;
 using SchoolMaster.Tests.Integration.Helpers;
@@ -70,7 +71,6 @@ public class SchoolMasterWebApplicationFactory : WebApplicationFactory<Program>,
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:DefaultConnection"] = _postgres.GetConnectionString(),
                 // JWT must be ≥ 32 ASCII chars for HmacSha256
                 ["Jwt:Key"] = "schoolmaster-test-secret-key-min-32-chars!!",
                 ["Jwt:Issuer"] = "schoolmaster-test",
@@ -87,6 +87,18 @@ public class SchoolMasterWebApplicationFactory : WebApplicationFactory<Program>,
 
         builder.ConfigureServices(services =>
         {
+            // Swap out the production NpgsqlDataSource (registered as a lazy singleton in
+            // Program.cs) for one that points at the Testcontainers PostgreSQL instance.
+            var dsDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(NpgsqlDataSource));
+            if (dsDescriptor != null) services.Remove(dsDescriptor);
+
+            var testDsBuilder = new NpgsqlDataSourceBuilder(_postgres.GetConnectionString());
+            testDsBuilder.ConfigureJsonOptions(new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter() }
+            });
+            services.AddSingleton(testDsBuilder.Build());
+
             // Replace EmailService (would try a real SMTP connection) with a no-op mock.
             var emailDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEmailService));
             if (emailDescriptor != null) services.Remove(emailDescriptor);
