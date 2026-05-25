@@ -305,19 +305,19 @@ docker compose up --build -d api
 - [x] JWT + refresh token auth with rotation
 - [x] OTP email verification and password reset
 - [x] Multi-tenant architecture with TenantId query filter
-- [ ] RBAC with fine-grained role permissions
+- [x] RBAC with fine-grained role permissions
 - [x] N-Tier Architecture (DB → Repo → Service → Controller)
 - [x] Global error handling middleware
 - [x] FluentValidation on all request DTOs
 - [x] Hangfire background jobs for notifications
 - [ ] Attendance domain events → notification pipeline
-- [ ] Unit and integration tests with Testcontainers
+- [x] Unit and integration tests with Testcontainers
 - [x] Docker + docker-compose with PostgreSQL and Redis
-- [ ] GitHub Actions CI/CD
+- [x] GitHub Actions CI/CD
 - [ ] Audit log — queryable history of all write operations
 - [ ] Timetable conflict detection — automatic validation before saving
 - [ ] Attendance analytics — heatmap view per class per week
 - [ ] Parent mobile push notifications via FCM (Firebase)
 - [ ] CSV export for all attendance reports
 - [ ] Soft delete — deactivate students/staff instead of hard delete
-- [ ] API versioning — /api/v1/ prefix enforced from day one
+- [x] API versioning — /api/v1/ prefix enforced from day one
