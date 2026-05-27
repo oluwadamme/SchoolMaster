@@ -19,6 +19,7 @@ public class StudentRepository : IStudentRepository
     public async Task AddStudentAsync(Student student)
     {
         await _context.Students.AddAsync(student);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<bool> ExistsByStudentNumberAsync(string studentNumber, Guid tenantId)
@@ -27,8 +28,18 @@ public class StudentRepository : IStudentRepository
             .AnyAsync(s => s.StudentNumber == studentNumber && s.TenantId == tenantId);
     }
 
+    public async Task<string?> GetLastStudentNumberAsync(Guid tenantId, string prefix)
+    {
+        return await _context.Students
+            .Where(s => s.TenantId == tenantId && s.StudentNumber.StartsWith(prefix))
+            .OrderByDescending(s => s.StudentNumber)
+            .Select(s => s.StudentNumber)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();
     }
+
 }

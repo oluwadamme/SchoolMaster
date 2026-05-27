@@ -6,6 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!-- Prevent the SDK from picking up test files in the SchoolMaster.Tests/ subdirectory -->
+  <ItemGroup>
+    <Compile Remove="SchoolMaster.Tests/**" />
+    <None Remove="SchoolMaster.Tests/**" />
+    <Content Remove="SchoolMaster.Tests/**" />
+  </ItemGroup>
+
   <ItemGroup>
      <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />

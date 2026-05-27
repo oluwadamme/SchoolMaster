@@ -10,6 +10,7 @@ using SchoolMaster.Infrastructure.Options;
 using Hangfire;
 using System.Security.Cryptography;
 using SchoolMaster.Domain.CustomException;
+using System.Transactions;
 
 namespace SchoolMaster.Application.Services;
 
@@ -52,6 +53,8 @@ public class OnboardingService : IOnboardingService
             throw new AlreadyExistException("Subdomain already exists.");
         }
 
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+
         // 2.Create Tenant
         var tenant = new Tenant
         {
@@ -82,7 +85,7 @@ public class OnboardingService : IOnboardingService
             Email = request.AdminEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.AdminPassword),
             Role = UserRole.Admin,
-            Status = UserStatus.Active,
+            Status = UserStatus.PendingVerification,
             IsEmailVerified = false,
             OtpToken = otp,
             OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes),
@@ -92,8 +95,7 @@ public class OnboardingService : IOnboardingService
 
         await _userRepository.AddUserAsync(adminUser);
 
-        // Commit Tenant and Admin User together
-        await _tenantRepository.SaveChangesAsync();
+        scope.Complete();
 
         // 4. Send email verification otp
         // adds email service job to the queue
@@ -127,6 +129,7 @@ public class OnboardingService : IOnboardingService
         user.OtpToken = null;
         user.OtpExpiry = null;
         user.UpdatedAt = DateTime.UtcNow;
+        user.Status = UserStatus.Active;
         await _userRepository.UpdateUserAsync(user);
         return BaseResponse<bool>.SuccessResponse("Email verified successfully", true);
     }

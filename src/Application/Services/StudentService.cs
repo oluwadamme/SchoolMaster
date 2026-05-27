@@ -4,6 +4,7 @@ using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Domain.CustomException;
 using SchoolMaster.Domain.Entities;
 using SchoolMaster.Domain.Enums;
+using System.Transactions;
 
 namespace SchoolMaster.Application.Services;
 
@@ -11,15 +12,18 @@ public class StudentService : IStudentService
 {
     private readonly IUserRepository _userRepository;
     private readonly IStudentRepository _studentRepository;
+    private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
 
     public StudentService(
         IUserRepository userRepository, 
         IStudentRepository studentRepository, 
+        ITenantRepository tenantRepository,
         ICurrentTenant currentTenant)
     {
         _userRepository = userRepository;
         _studentRepository = studentRepository;
+        _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
     }
 
@@ -37,10 +41,10 @@ public class StudentService : IStudentService
             throw new AlreadyExistException($"Email {request.Email} is already registered.");
         }
 
-        if (await _studentRepository.ExistsByStudentNumberAsync(request.StudentNumber, tenantId))
-        {
-            throw new AlreadyExistException($"Student number {request.StudentNumber} is already assigned.");
-        }
+        // Generate Permanent ID: GHA/2024/0001
+        var studentNumber = await GeneratePermanentStudentNumber(tenantId);
+
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
         var user = new User
         {
@@ -62,7 +66,7 @@ public class StudentService : IStudentService
             Id = Guid.NewGuid(),
             UserId = user.Id,
             TenantId = tenantId,
-            StudentNumber = request.StudentNumber,
+            StudentNumber = studentNumber,
             FirstName = request.FirstName,
             LastName = request.LastName,
             DateOfBirth = request.DateOfBirth,
@@ -77,8 +81,7 @@ public class StudentService : IStudentService
         };
         await _studentRepository.AddStudentAsync(student);
 
-        // 2. Save all changes in a single database transaction
-        await _studentRepository.SaveChangesAsync();
+        scope.Complete();
 
         var response = new StudentResponse(
             student.Id, 
@@ -96,5 +99,33 @@ public class StudentService : IStudentService
         return BaseResponse<StudentResponse>.SuccessResponse("Student enrolled successfully.", response);
     }
 
+    private async Task<string> GeneratePermanentStudentNumber(Guid tenantId)
+    {
+        // 1. Get the school's code (e.g., GHA)
+        var tenant = await _tenantRepository.GetByIdAsync(tenantId);
+        if (tenant == null)
+        {
+            throw new TenantNotFoundException("School identification not found.");
+        }
 
+        var year = DateTime.UtcNow.Year;
+        var prefix = $"{tenant.SchoolCode}/{year}/";
+
+        // 2. Find the last assigned code for this school and year
+        var lastCode = await _studentRepository.GetLastStudentNumberAsync(tenantId, prefix);
+
+        int nextSequence = 1;
+        if (lastCode != null)
+        {
+            // 3. Extract sequence from "GHA/2024/000015" and increment
+            var parts = lastCode.Split('/');
+            if (parts.Length == 3 && int.TryParse(parts[2], out int lastSeq))
+            {
+                nextSequence = lastSeq + 1;
+            }
+        }
+
+        // 4. Return formatted ID with 6-digit padding (000001, 000002...)
+        return $"{prefix}{nextSequence:D6}";
+    }
 }

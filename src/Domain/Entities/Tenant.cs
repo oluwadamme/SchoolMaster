@@ -5,6 +5,7 @@ public class Tenant
     public required Guid Id { get; set; }
     public required string Name { get; set; }
     public required string Subdomain { get; set; }
+    public required string SchoolCode { get; set; } // e.g., GHA
     public required string ContactEmail { get; set; }
     public required TenantStatus Status { get; set; }
     public required TenantPlan Plan { get; set; }

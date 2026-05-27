@@ -13,9 +13,6 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IJwtService _jwtService;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-
-
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly IOptions<EmailVerificationOptions> _emailOptions;
     private readonly ICurrentTenant _currentTenant;
@@ -24,7 +21,6 @@ public class AuthService : IAuthService
     public AuthService(
         IUserRepository userRepository, 
         IJwtService jwtService, 
-        IHttpContextAccessor httpContextAccessor,
         IBackgroundJobClient backgroundJobClient, 
         IOptions<EmailVerificationOptions> emailOptions, 
         ICurrentTenant currentTenant, 
@@ -32,7 +28,6 @@ public class AuthService : IAuthService
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
-        _httpContextAccessor = httpContextAccessor;
         _backgroundJobClient = backgroundJobClient;
         _emailOptions = emailOptions;
         _currentTenant = currentTenant;
@@ -44,15 +39,15 @@ public class AuthService : IAuthService
         // 1. Retrieve the TenantId found by the Middleware from the X-Tenant-Subdomain header
         // so it knows the school to check for the login attempt
         // if two schools have the same email for a user, this will make sure the user can only log in to the correct school.
-        var tenantId = (Guid?)_httpContextAccessor.HttpContext?.Items["TenantId"];
+        var tenantId = _currentTenant.Id;
 
-        if (tenantId == null || tenantId == Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
             throw new TenantNotFoundException("School identification is missing from the request header.");
         }
 
         // 2. Find the user only within THAT specific school
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId.Value);
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
 
         // If no user is found with that email, it means the email is wrong.
         if (user == null)

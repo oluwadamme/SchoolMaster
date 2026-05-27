@@ -6,4 +6,5 @@ using System.Threading.Tasks;
 public interface IStaffService
 {
     Task<BaseResponse<StaffResponse>> CreateStaffAsync(CreateStaffRequest request);
+    Task<BaseResponse<bool>> ResendStaffInvitationAsync(ResendOtpRequest request);
 }

@@ -7,7 +7,7 @@ namespace SchoolMaster.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/staff")]
-[Authorize(Roles = "Admin")]
+[Authorize(Policy = "EmailVerified", Roles = "Admin")] // Only Verified Admins can access the staff management endpoints
 public class StaffController : ControllerBase
 {
     private readonly IStaffService _staffService;
@@ -26,5 +26,15 @@ public class StaffController : ControllerBase
         var response = await _staffService.CreateStaffAsync(request);
         
         return CreatedAtAction(nameof(CreateStaff), new { id = response.Data?.Id }, response);
+    }
+
+    /// <summary>
+    /// Resends the 7-day invitation email to a staff member.
+    /// </summary>
+    [HttpPost("resend-invitation")]
+    public async Task<ActionResult<BaseResponse<bool>>> ResendInvitation([FromBody] ResendOtpRequest request)
+    {
+        var response = await _staffService.ResendStaffInvitationAsync(request);
+        return Ok(response);
     }
 }

@@ -32,9 +32,13 @@ try
     var builder = WebApplication.CreateBuilder(args);
     builder.Host.UseSerilog(); // Tell .NET to use Serilog instead of the default logger
 
-
+    // where you register the services you will use
     // Add services to the container.
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        });
     // 1. Tell ASP.NET Core to auto-validate requests using FluentValidation
     builder.Services.AddFluentValidationAutoValidation();
     // 2. Tell DI to scan your project and register RegisterRequestValidator (and any others you make)
@@ -43,6 +47,7 @@ try
     builder.Services.AddValidatorsFromAssemblyContaining<VerifyUserEmailRequestValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<ResendOtpRequestValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>(); // Register the new student validator
+    builder.Services.AddValidatorsFromAssemblyContaining<CreateStaffRequestValidator>();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
@@ -54,9 +59,8 @@ try
     builder.Services.AddScoped<IStudentRepository, StudentRepository>(); // Register the StudentRepository
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
-    builder.Services.AddScoped<IJwtService, JwtService>();
+    builder.Services.AddScoped<IJwtService, JwtService>(); // This line was already there, just showing context
     builder.Services.AddScoped<IOtpService, OtpService>();
-
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
     builder.Services.Configure<EmailVerificationOptions>(builder.Configuration.GetSection("EmailVerification"));
@@ -168,7 +172,7 @@ try
     app.UseAuthentication();   // ← BEFORE authorization
     app.UseAuthorization();    // ← AFTER authentication
                                // Configure the HTTP request pipeline.
-    app.UseRateLimiter();
+    if (!isTesting) app.UseRateLimiter();
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();

@@ -18,6 +18,7 @@ public class TenantRepository : ITenantRepository
     public async Task AddTenantAsync(Tenant tenant)
     {
         await _context.Tenants.AddAsync(tenant);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<bool> ExistsBySubdomainAsync(string subdomain)
@@ -32,8 +33,16 @@ public class TenantRepository : ITenantRepository
 
     }
 
+    public async Task<Tenant?> GetByIdAsync(Guid id)
+    {
+        return await _context.Tenants.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.Id == id);
+    }
+
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();
     }
+
+
 }

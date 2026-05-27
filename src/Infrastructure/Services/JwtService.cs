@@ -34,14 +34,17 @@ public class JwtService : IJwtService
             new Claim(ClaimTypes.GivenName, user.FirstName),
             new Claim(ClaimTypes.Surname, user.LastName),
             new Claim(ClaimTypes.Role, user.Role.ToString()),
-            new Claim("tenant_id", user.TenantId.ToString()) // Important for multi-tenancy!
+            new Claim("tenant_id", user.TenantId.ToString()), // Important for multi-tenancy!
+            new Claim("email_verified", user.IsEmailVerified.ToString().ToLower()) // Policy check
         };
 
         // 3. Describe the token (who made it, who it's for, how long it lasts).
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpirationInMinutes), // Token expires after this time.
+            Expires = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpirationInMinutes),
+            Issuer = _jwtOptions.Issuer,
+            Audience = _jwtOptions.Audience,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
 

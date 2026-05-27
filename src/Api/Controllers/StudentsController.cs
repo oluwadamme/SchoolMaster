@@ -6,8 +6,8 @@ using SchoolMaster.Application.Services.Interfaces;
 namespace SchoolMaster.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
-[Authorize] // Requires a valid JWT token
+[Route("api/v1/students")]
+[Authorize(Policy = "EmailVerified")] // Checks JWT token and ensures the user's email is verified before they can acces
 public class StudentsController : ControllerBase
 {
     private readonly IStudentService _studentService;

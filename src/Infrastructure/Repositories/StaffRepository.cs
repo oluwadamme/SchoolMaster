@@ -19,13 +19,25 @@ public class StaffRepository : IStaffRepository
     public async Task AddStaffAsync(Staff staff)
     {
         await _context.Staff.AddAsync(staff);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<bool> ExistsByStaffNumberAsync(string staffNumber, Guid tenantId) =>
         await _context.Staff.AnyAsync(s => s.StaffNumber == staffNumber && s.TenantId == tenantId);
 
+    public async Task<string?> GetLastStaffNumberAsync(Guid tenantId, string prefix)
+    {
+        return await _context.Staff
+            .Where(s => s.TenantId == tenantId && s.StaffNumber.StartsWith(prefix))
+            .OrderByDescending(s => s.StaffNumber)
+            .Select(s => s.StaffNumber)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();
     }
+
+  
 }
