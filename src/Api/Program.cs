@@ -55,6 +55,8 @@ try
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IJwtService, JwtService>();
     builder.Services.AddScoped<IOtpService, OtpService>();
+    builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
     builder.Services.Configure<EmailVerificationOptions>(builder.Configuration.GetSection("EmailVerification"));
@@ -183,6 +185,7 @@ try
     }
     app.UseMiddleware<TenantResolverMiddleware>();
     app.UseMiddleware<ExceptionMiddleware>();
+    app.UseMiddleware<UnitOfWorkMiddleware>();
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()
 

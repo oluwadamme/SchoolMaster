@@ -16,7 +16,7 @@ public class TenantRepository : ITenantRepository
     public async Task AddTenantAsync(Tenant tenant)
     {
         await _context.Tenants.AddAsync(tenant);
-        await _context.SaveChangesAsync();
+        // await _context.SaveChangesAsync();
     }
 
     public async Task<bool> ExistsBySubdomainAsync(string subdomain)

@@ -41,7 +41,7 @@ public class AuthServiceTests
         return new User
         {
             Id = Guid.NewGuid(),
-            TenantId = Guid.NewGuid(),
+            TenantId = MakeActiveTenant().Id,
             FirstName = "John",
             LastName = "Doe",
             Email = email,
@@ -50,6 +50,19 @@ public class AuthServiceTests
             IsEmailVerified = true,
         };
     }
+
+    private static Tenant MakeActiveTenant(string subdomain = "schoolmaster") => new()
+    {
+        Id = Guid.NewGuid(),
+        Name = "Test School",
+        Subdomain = subdomain,
+        Status = TenantStatus.Active,
+        Plan = TenantPlan.Basic,
+        ContactEmail = "contact@test.com",
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow,
+
+    };
 
     private static ClaimsPrincipal MakePrincipal(Guid userId, Guid tenantId) =>
         new(new ClaimsIdentity(new[]
@@ -67,7 +80,7 @@ public class AuthServiceTests
     {
         const string password = "Test@123!";
         var user = MakeActiveUser(password: password);
-        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, _currentTenant.Object.Id)).ReturnsAsync(user);
         _jwtService.Setup(j => j.GenerateAccessToken(user)).Returns("access-token");
         _jwtService.Setup(j => j.GenerateRefreshToken()).Returns("refresh-token");
 
@@ -93,7 +106,7 @@ public class AuthServiceTests
     public async Task LoginAsync_WithWrongPassword_ThrowsInvalidCredentialsException()
     {
         var user = MakeActiveUser(password: "CorrectPass@1");
-        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, _currentTenant.Object.Id)).ReturnsAsync(user);
 
         await Assert.ThrowsAsync<InvalidCredentialsException>(
             () => CreateSut().LoginAsync(new LoginRequest(user.Email, "WrongPass@1")));
@@ -104,7 +117,7 @@ public class AuthServiceTests
     {
         const string password = "Test@123!";
         var user = MakeActiveUser(password: password);
-        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, _currentTenant.Object.Id)).ReturnsAsync(user);
         _jwtService.Setup(j => j.GenerateRefreshToken()).Returns("new-refresh");
 
         await CreateSut().LoginAsync(new LoginRequest(user.Email, password));

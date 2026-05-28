@@ -32,7 +32,7 @@ public class AuthService : IAuthService
     {
         // 1. Find the user in the database using their email.
         // The IUserRepository tool helps us do this.
-        var user = await _userRepository.GetUserByEmailAsync(request.Email);
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, _currentTenant.Id);
 
         // If no user is found with that email, it means the email is wrong.
         if (user == null)

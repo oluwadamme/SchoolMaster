@@ -53,9 +53,6 @@ public class OnboardingService : IOnboardingService
             throw new AlreadyExistException("Subdomain already exists.");
         }
 
-        // Use transaction scope to ensure atomicity
-        using var dbScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-
         // 2.Create Tenant
         var tenant = new Tenant
         {
@@ -94,7 +91,6 @@ public class OnboardingService : IOnboardingService
         };
 
         await _userRepository.AddUserAsync(adminUser);
-        dbScope.Complete();
         // 4. Send email verification otp
         // adds email service job to the queue
 
