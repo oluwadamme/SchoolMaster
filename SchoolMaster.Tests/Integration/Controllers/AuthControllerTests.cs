@@ -37,6 +37,7 @@ public class AuthControllerTests : IClassFixture<SchoolMasterWebApplicationFacto
             AdminLastName = "Admin",
             AdminEmail = $"authadmin-{u}@test.com",
             AdminPassword = "Test@123!",
+            SchoolCode = "SCH",
         };
     }
 
