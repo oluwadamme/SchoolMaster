@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 
 public class User
 {
+<<<<<<< HEAD
     public required Guid Id { get; set; }
     public required Guid TenantId { get; set; }
     public required string FirstName { get; set; }
@@ -14,6 +15,17 @@ public class User
     public required UserRole Role { get; set; }
 
     public required UserStatus Status { get; set; }
+=======
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string Email { get; set; }
+    public string PasswordHash { get; set; }
+    public List<UserRole> Roles { get; set; } = new();
+
+    public UserStatus Status { get; set; } = UserStatus.PendingVerification;
+>>>>>>> f13bbbb66234ba5f86148debdd46d7224e35d8bd
     public bool IsEmailVerified { get; set; }
     
     public string? RefreshToken { get; set; }

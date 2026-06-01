@@ -75,20 +75,27 @@ The application follows an N-Tier architecture (Controller → Service → Repos
 
 ### Phase 1 API Endpoints
 
+#### Onboarding API
+
+Base URL: `/api/v1/onboarding`
+
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| `POST` | `/api/v1/onboarding/tenants` | Register a new school and create its Admin | ❌ No |
+| `POST` | `/api/v1/onboarding/verify-email` | Verify Admin email with OTP | ❌ No |
+| `POST` | `/api/v1/onboarding/resend-verification-otp` | Resend OTP email | ❌ No |
+
 #### Authentication API
 
 Base URL: `/api/v1/auth`
 
 | Method | Endpoint | Description | Auth Required |
 |---|---|---|---|
-| `POST` | `/api/v1/auth/register` | Register a new user (sends OTP) | ❌ No |
 | `POST` | `/api/v1/auth/login` | Login — returns JWT + refresh token | ❌ No |
 | `POST` | `/api/v1/auth/refresh-token` | Exchange refresh token for new JWT | ❌ No |
-| `POST` | `/api/v1/auth/verify-email` | Verify email with OTP | ❌ No |
-| `POST` | `/api/v1/auth/resend-verification` | Resend OTP email | ❌ No |
 | `POST` | `/api/v1/auth/forgot-password` | Request password reset OTP | ❌ No |
 | `POST` | `/api/v1/auth/reset-password` | Reset password with OTP | ❌ No |
-| `POST` | `/api/v1/auth/logout` | Revoke refresh token | ✅ Yes |
+| `PATCH` | `/api/v1/auth/users/deactivate-by-email` | Deactivate a user account | ✅ Yes (Admin) |
 
 #### Students API
 
@@ -305,7 +312,7 @@ docker compose up --build -d api
 - [x] Hangfire background jobs for notifications
 - [ ] Attendance domain events → notification pipeline
 - [ ] Unit and integration tests with Testcontainers
-- [ ] Docker + docker-compose with PostgreSQL and Redis
+- [x] Docker + docker-compose with PostgreSQL and Redis
 - [ ] GitHub Actions CI/CD
 - [ ] Audit log — queryable history of all write operations
 - [ ] Timetable conflict detection — automatic validation before saving

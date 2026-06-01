@@ -84,8 +84,12 @@ public class OnboardingService : IOnboardingService
             LastName = request.AdminLastName,
             Email = request.AdminEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.AdminPassword),
+<<<<<<< HEAD
             Role = UserRole.Admin,
             Status = UserStatus.PendingVerification,
+=======
+            Roles = new List<UserRole> { UserRole.Admin },
+>>>>>>> f13bbbb66234ba5f86148debdd46d7224e35d8bd
             IsEmailVerified = false,
             OtpToken = otp,
             OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes),
@@ -126,6 +130,7 @@ public class OnboardingService : IOnboardingService
             throw new InvalidOtpException("Invalid OTP or email address.");
         }
         user.IsEmailVerified = true;
+        user.Status = UserStatus.Active;
         user.OtpToken = null;
         user.OtpExpiry = null;
         user.UpdatedAt = DateTime.UtcNow;

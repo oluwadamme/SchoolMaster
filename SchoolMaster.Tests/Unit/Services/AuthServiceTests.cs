@@ -46,7 +46,7 @@ public class AuthServiceTests
             LastName = "Doe",
             Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-            Role = UserRole.Admin,
+            Roles = [UserRole.Admin],
             IsEmailVerified = true,
         };
     }
@@ -126,7 +126,7 @@ public class AuthServiceTests
         var user = new User
         {
             Id = userId, TenantId = tenantId, FirstName = "A", LastName = "B",
-            Email = "a@b.com", PasswordHash = "x", Role = UserRole.Admin,
+            Email = "a@b.com", PasswordHash = "x", Roles = [UserRole.Admin],
         };
         user.UpdateRefreshToken("valid-refresh", 7);
 
@@ -188,7 +188,7 @@ public class AuthServiceTests
         var user = new User
         {
             Id = userId, TenantId = tenantId, FirstName = "A", LastName = "B",
-            Email = "a@b.com", PasswordHash = "x", Role = UserRole.Admin,
+            Email = "a@b.com", PasswordHash = "x", Roles = [UserRole.Admin],
         };
         user.UpdateRefreshToken("stored-token", 7);
 
@@ -208,7 +208,7 @@ public class AuthServiceTests
         var user = new User
         {
             Id = userId, TenantId = tenantId, FirstName = "A", LastName = "B",
-            Email = "a@b.com", PasswordHash = "x", Role = UserRole.Admin,
+            Email = "a@b.com", PasswordHash = "x", Roles = [UserRole.Admin],
         };
         // AddDays(-1) → expiry is yesterday
         user.UpdateRefreshToken("expired-token", -1);
@@ -309,7 +309,7 @@ public class AuthServiceTests
         var user = new User
         {
             Id = Guid.NewGuid(), TenantId = tenantId, FirstName = "A", LastName = "B",
-            Email = "a@test.com", PasswordHash = "old-hash", Role = UserRole.Admin,
+            Email = "a@test.com", PasswordHash = "old-hash", Roles = [UserRole.Admin],
             OtpToken = "1234", OtpExpiry = DateTime.UtcNow.AddMinutes(10),
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
@@ -360,7 +360,7 @@ public class AuthServiceTests
         var user = new User
         {
             Id = Guid.NewGuid(), TenantId = tenantId, FirstName = "A", LastName = "B",
-            Email = "a@test.com", PasswordHash = "h", Role = UserRole.Admin,
+            Email = "a@test.com", PasswordHash = "h", Roles = [UserRole.Admin],
             OtpToken = "correct", OtpExpiry = DateTime.UtcNow.AddMinutes(10),
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
@@ -380,7 +380,7 @@ public class AuthServiceTests
         var user = new User
         {
             Id = Guid.NewGuid(), TenantId = tenantId, FirstName = "A", LastName = "B",
-            Email = "a@test.com", PasswordHash = "h", Role = UserRole.Admin,
+            Email = "a@test.com", PasswordHash = "h", Roles = [UserRole.Admin],
             OtpToken = "1234", OtpExpiry = DateTime.UtcNow.AddMinutes(-5), // expired
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);

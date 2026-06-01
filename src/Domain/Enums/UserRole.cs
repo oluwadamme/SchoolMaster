@@ -2,5 +2,5 @@ namespace SchoolMaster.Domain.Enums;
 
 public enum UserRole
 {
-    Admin, Teacher, Student, Parent
+    Admin, Teacher, Student, Parent, Staff
 }

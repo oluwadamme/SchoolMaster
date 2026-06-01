@@ -17,7 +17,11 @@ using Hangfire.PostgreSql;
 using SchoolMaster.Infrastructure.Persistence;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Application.DTOs;
-
+using SchoolMaster.Api.Authorization;
+using SchoolMaster.Domain.Enums;
+using Microsoft.AspNetCore.Authorization;
+using Npgsql;
+using System.Text.Json;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -42,12 +46,16 @@ try
     // 1. Tell ASP.NET Core to auto-validate requests using FluentValidation
     builder.Services.AddFluentValidationAutoValidation();
     // 2. Tell DI to scan your project and register RegisterRequestValidator (and any others you make)
+<<<<<<< HEAD
     builder.Services.AddValidatorsFromAssemblyContaining<DeactivateUserByEmailRequestValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<OnboardTenantRequestValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<VerifyUserEmailRequestValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<ResendOtpRequestValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>(); // Register the new student validator
     builder.Services.AddValidatorsFromAssemblyContaining<CreateStaffRequestValidator>();
+=======
+    builder.Services.AddValidatorsFromAssembly(typeof(OnboardTenantRequestValidator).Assembly);
+>>>>>>> f13bbbb66234ba5f86148debdd46d7224e35d8bd
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
@@ -80,10 +88,37 @@ try
                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
            };
        });
-    builder.Services.AddAuthorization();
+    builder.Services.AddAuthorization(
+        options =>
+        {
+            // Dynamically create a policy for each permission in the Permission enum
+            foreach (var permission in Enum.GetValues<Permission>())
+            {
+                options.AddPolicy(permission.ToString(), policy =>
+                    policy.AddRequirements(new HasPermissionRequirement(permission)));
+            }
+        }
+    );
+    builder.Services.AddScoped<IAuthorizationHandler, HasPermissionHandler>();
 
-    builder.Services.AddDbContext<SchoolMasterContext>(options =>
-        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    // Registered as a singleton factory so it is built lazily at first resolve —
+    // after the DI container is fully configured. This lets WebApplicationFactory
+    // swap it out with a Testcontainers data source before any test runs.
+    builder.Services.AddSingleton<NpgsqlDataSource>(sp =>
+    {
+        var connectionString = sp.GetRequiredService<IConfiguration>()
+            .GetConnectionString("DefaultConnection");
+        var dsBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dsBuilder.ConfigureJsonOptions(new JsonSerializerOptions
+        {
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+        });
+        return dsBuilder.Build();
+    });
+
+    builder.Services.AddDbContext<SchoolMasterContext>((sp, options) =>
+        options.UseNpgsql(sp.GetRequiredService<NpgsqlDataSource>()));
+
     builder.Services.AddRateLimiter(options =>
         {
             // If they get blocked, send back a 429 Too Many Requests
@@ -191,3 +226,6 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// Required so WebApplicationFactory<Program> in integration tests can access this type.
+public partial class Program { }

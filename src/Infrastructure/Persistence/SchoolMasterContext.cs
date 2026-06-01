@@ -24,7 +24,9 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
         modelBuilder.Entity<Staff>()
             .HasIndex(s => new { s.TenantId, s.StaffNumber })
             .IsUnique();
-
+        modelBuilder.Entity<User>()
+            .Property(u => u.Roles)
+            .HasColumnType("jsonb");
         // User ← Student (one-to-one)
         modelBuilder.Entity<Student>()
             .HasOne(s => s.User)           // Student has one User
