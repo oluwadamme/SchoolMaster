@@ -41,11 +41,6 @@ public class AuthService : IAuthService
         // if two schools have the same email for a user, this will make sure the user can only log in to the correct school.
         var tenantId = _currentTenant.Id;
 
-        if (tenantId == Guid.Empty)
-        {
-            throw new TenantNotFoundException("School identification is missing from the request header.");
-        }
-
         // 2. Find the user only within THAT specific school
         var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
 
@@ -171,12 +166,6 @@ public class AuthService : IAuthService
     {
         // 1. Get the TenantId automatically from our abstraction!
         var tenantId = _currentTenant.Id;
-        if (tenantId == Guid.Empty)
-        {
-            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
-
-            return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
-        }
         var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
         if (user == null)
         {
@@ -201,12 +190,6 @@ public class AuthService : IAuthService
     public async Task<BaseResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request)
     {
         var tenantId = _currentTenant.Id;
-        if (tenantId == Guid.Empty)
-        {
-            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
-
-            throw new InvalidOtpException("Invalid OTP or Email address.");
-        }
         var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, _currentTenant.Id);
         if (user == null || user.OtpToken != request.Otp)
         {
