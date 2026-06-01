@@ -166,6 +166,12 @@ public class AuthService : IAuthService
     {
         // 1. Get the TenantId automatically from our abstraction!
         var tenantId = _currentTenant.Id;
+        if (tenantId == Guid.Empty)
+        {
+            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+
+            return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
+        }
         var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
         if (user == null)
         {
@@ -186,7 +192,6 @@ public class AuthService : IAuthService
 
         return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
     }
-
     public async Task<BaseResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request)
     {
         var tenantId = _currentTenant.Id;
