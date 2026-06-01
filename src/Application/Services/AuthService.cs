@@ -142,10 +142,11 @@ public class AuthService : IAuthService
     }
 
   
-    public async Task<BaseResponse<bool>> DeactivateUserByEmailAsync(string email, Guid tenantId)
+    public async Task<BaseResponse<bool>> DeactivateUserByEmailAsync(string email)
     {
         // 1. Find the user by Email and TenantId (Safety first!)
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(email, tenantId);
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(email, _currentTenant.Id);
+        // var tenantId);
 
         // If we can't find them, they might be in another school or already inactive
         if (user == null)

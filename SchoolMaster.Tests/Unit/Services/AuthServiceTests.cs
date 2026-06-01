@@ -245,7 +245,7 @@ public class AuthServiceTests
         var user = MakeActiveUser();
         _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
 
-        var result = await CreateSut().DeactivateUserByEmailAsync(user.Email, tenantId);
+        var result = await CreateSut().DeactivateUserByEmailAsync(user.Email);
 
         Assert.True(result.Success);
         Assert.True(result.Data);
@@ -262,7 +262,7 @@ public class AuthServiceTests
             .ReturnsAsync((User?)null);
 
         await Assert.ThrowsAsync<UserNotFoundException>(
-            () => CreateSut().DeactivateUserByEmailAsync("ghost@test.com", tenantId));
+            () => CreateSut().DeactivateUserByEmailAsync("ghost@test.com"));
     }
 
     // -------------------------------------------------------------------------

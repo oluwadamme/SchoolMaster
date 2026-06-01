@@ -12,13 +12,11 @@ namespace SchoolMaster.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
-    private readonly ICurrentTenant _currentTenant;
 
 
-    public AuthController(IAuthService authService, ICurrentTenant currentTenant)
+    public AuthController(IAuthService authService)
     {
         _authService = authService;
-        _currentTenant = currentTenant;
     }
     [EnableRateLimiting("AuthLimit")]
     [HttpPost("login")]
@@ -50,7 +48,7 @@ public class AuthController : ControllerBase
     [HttpPatch("users/deactivate-by-email")]
     public async Task<ActionResult<BaseResponse<bool>>> DeactivateByEmail([FromBody] DeactivateUserByEmailRequest request)
     {
-        var result = await _authService.DeactivateUserByEmailAsync(request.Email, _currentTenant.Id);
+        var result = await _authService.DeactivateUserByEmailAsync(request.Email);
         return Ok(result);
     }
 
