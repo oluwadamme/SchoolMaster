@@ -241,9 +241,8 @@ public class AuthServiceTests
     [Fact]
     public async Task DeactivateUserByEmailAsync_WithExistingActiveUser_SetsStatusInactiveAndReturnsTrue()
     {
-        var tenantId = Guid.NewGuid();
         var user = MakeActiveUser();
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, _currentTenant.Object.Id)).ReturnsAsync(user);
 
         var result = await CreateSut().DeactivateUserByEmailAsync(user.Email);
 
