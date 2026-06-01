@@ -46,16 +46,7 @@ try
     // 1. Tell ASP.NET Core to auto-validate requests using FluentValidation
     builder.Services.AddFluentValidationAutoValidation();
     // 2. Tell DI to scan your project and register RegisterRequestValidator (and any others you make)
-<<<<<<< HEAD
-    builder.Services.AddValidatorsFromAssemblyContaining<DeactivateUserByEmailRequestValidator>();
-    builder.Services.AddValidatorsFromAssemblyContaining<OnboardTenantRequestValidator>();
-    builder.Services.AddValidatorsFromAssemblyContaining<VerifyUserEmailRequestValidator>();
-    builder.Services.AddValidatorsFromAssemblyContaining<ResendOtpRequestValidator>();
-    builder.Services.AddValidatorsFromAssemblyContaining<CreateStudentRequestValidator>(); // Register the new student validator
-    builder.Services.AddValidatorsFromAssemblyContaining<CreateStaffRequestValidator>();
-=======
     builder.Services.AddValidatorsFromAssembly(typeof(OnboardTenantRequestValidator).Assembly);
->>>>>>> f13bbbb66234ba5f86148debdd46d7224e35d8bd
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
@@ -69,6 +60,8 @@ try
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IJwtService, JwtService>(); // This line was already there, just showing context
     builder.Services.AddScoped<IOtpService, OtpService>();
+    builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
     builder.Services.Configure<EmailVerificationOptions>(builder.Configuration.GetSection("EmailVerification"));
@@ -201,6 +194,7 @@ try
     // 2. Check-in Desk (Identify the School)
     app.UseMiddleware<TenantResolverMiddleware>();
 
+    app.UseMiddleware<UnitOfWorkMiddleware>();
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()
 

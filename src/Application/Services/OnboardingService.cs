@@ -53,8 +53,6 @@ public class OnboardingService : IOnboardingService
             throw new AlreadyExistException("Subdomain already exists.");
         }
 
-        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-
         // 2.Create Tenant
         var tenant = new Tenant
         {
@@ -84,12 +82,8 @@ public class OnboardingService : IOnboardingService
             LastName = request.AdminLastName,
             Email = request.AdminEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.AdminPassword),
-<<<<<<< HEAD
-            Role = UserRole.Admin,
-            Status = UserStatus.PendingVerification,
-=======
             Roles = new List<UserRole> { UserRole.Admin },
->>>>>>> f13bbbb66234ba5f86148debdd46d7224e35d8bd
+            Status = UserStatus.PendingVerification,
             IsEmailVerified = false,
             OtpToken = otp,
             OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes),
@@ -98,9 +92,6 @@ public class OnboardingService : IOnboardingService
         };
 
         await _userRepository.AddUserAsync(adminUser);
-
-        scope.Complete();
-
         // 4. Send email verification otp
         // adds email service job to the queue
 

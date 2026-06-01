@@ -1,6 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using SchoolMaster.Domain.Entities;
 using SchoolMaster.Application.Services.Interfaces;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using SchoolMaster.Domain.Enums;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace SchoolMaster.Infrastructure.Persistence;
 
@@ -24,9 +28,24 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
         modelBuilder.Entity<Staff>()
             .HasIndex(s => new { s.TenantId, s.StaffNumber })
             .IsUnique();
+        var jsonOptions = new JsonSerializerOptions
+        {
+            Converters = { new JsonStringEnumConverter() }
+        };
+
         modelBuilder.Entity<User>()
             .Property(u => u.Roles)
-            .HasColumnType("jsonb");
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<UserRole>>(v, jsonOptions) ?? new List<UserRole>(),
+                new ValueComparer<List<UserRole>>(
+                    (c1, c2) => c1!.SequenceEqual(c2!),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToList()
+                )
+            );
+
         // User ← Student (one-to-one)
         modelBuilder.Entity<Student>()
             .HasOne(s => s.User)           // Student has one User
