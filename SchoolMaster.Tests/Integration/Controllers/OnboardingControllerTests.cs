@@ -162,7 +162,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
         var (subdomain, tenantId, adminEmail) = await SeedTenantAsync();
 
         var request = BuildRequest(HttpMethod.Post, "/api/v1/onboarding/verify-email",
-            new VerifyUserEmailRequest { Email = adminEmail, OtpToken = SchoolMasterWebApplicationFactory.FixedOtp, TenantId = tenantId },
+            new VerifyUserEmailRequest { Email = adminEmail, OtpToken = SchoolMasterWebApplicationFactory.FixedOtp},
             subdomain);
 
         var response = await _client.SendAsync(request);
@@ -179,7 +179,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
         var (subdomain, tenantId, adminEmail) = await SeedTenantAsync();
 
         var request = BuildRequest(HttpMethod.Post, "/api/v1/onboarding/verify-email",
-            new VerifyUserEmailRequest { Email = adminEmail, OtpToken = "9999", TenantId = tenantId },
+            new VerifyUserEmailRequest { Email = adminEmail, OtpToken = "9999" },
             subdomain);
 
         var response = await _client.SendAsync(request);
@@ -194,7 +194,7 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
 
         // No X-Tenant-Subdomain header — ICurrentTenant.Id will be Guid.Empty
         var response = await _client.PostAsJsonAsync("/api/v1/onboarding/verify-email",
-            new VerifyUserEmailRequest { Email = adminEmail, OtpToken = SchoolMasterWebApplicationFactory.FixedOtp, TenantId = tenantId });
+            new VerifyUserEmailRequest { Email = adminEmail, OtpToken = SchoolMasterWebApplicationFactory.FixedOtp});
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

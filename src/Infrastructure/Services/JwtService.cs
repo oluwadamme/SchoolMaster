@@ -34,13 +34,8 @@ public class JwtService : IJwtService
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.GivenName, user.FirstName),
             new Claim(ClaimTypes.Surname, user.LastName),
-<<<<<<< HEAD
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
             new Claim("tenant_id", user.TenantId.ToString()), // Important for multi-tenancy!
             new Claim("email_verified", user.IsEmailVerified.ToString().ToLower()) // Policy check
-=======
-            new Claim("tenant_id", user.TenantId.ToString()) // Important for multi-tenancy!
->>>>>>> f13bbbb66234ba5f86148debdd46d7224e35d8bd
         };
 
         foreach (var role in user.Roles)

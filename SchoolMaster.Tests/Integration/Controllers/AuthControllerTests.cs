@@ -60,7 +60,6 @@ public class AuthControllerTests : IClassFixture<SchoolMasterWebApplicationFacto
             {
                 Email = req.AdminEmail,
                 OtpToken = SchoolMasterWebApplicationFactory.FixedOtp,
-                TenantId = tenantId
             })
         };
         verifyMsg.Headers.Add("X-Tenant-Subdomain", req.Subdomain);

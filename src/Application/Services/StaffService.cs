@@ -72,7 +72,7 @@ public class StaffService : IStaffService
             LastName = request.LastName,
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = UserRole.Teacher,
+            Roles = new List<UserRole> { UserRole.Teacher },
             Status = UserStatus.PendingVerification,
             IsEmailVerified = false,
             OtpToken = otp,

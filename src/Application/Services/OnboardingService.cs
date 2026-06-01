@@ -63,6 +63,7 @@ public class OnboardingService : IOnboardingService
             Status = TenantStatus.Active,
             Plan = TenantPlan.Basic,
             CreatedAt = DateTime.UtcNow,
+            SchoolCode = request.SchoolCode,
             UpdatedAt = DateTime.UtcNow
         };
 

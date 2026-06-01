@@ -54,7 +54,7 @@ public class StudentService : IStudentService
             LastName = request.LastName,
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = UserRole.Student,
+            Roles = new List<UserRole> { UserRole.Student },
             Status = UserStatus.Active,
             IsEmailVerified = false,
             CreatedAt = DateTime.UtcNow

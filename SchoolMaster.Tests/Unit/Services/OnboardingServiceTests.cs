@@ -135,7 +135,7 @@ public class OnboardingServiceTests
 
         var result = await CreateSut().VerifyUserEmailAsync(new VerifyUserEmailRequest
         {
-            Email = user.Email, OtpToken = "1234", TenantId = tenantId
+            Email = user.Email, OtpToken = "1234"
         });
 
         Assert.True(result.Success);
@@ -153,7 +153,7 @@ public class OnboardingServiceTests
         await Assert.ThrowsAsync<InvalidOtpException>(
             () => CreateSut().VerifyUserEmailAsync(new VerifyUserEmailRequest
             {
-                Email = "a@b.com", OtpToken = "1234", TenantId = Guid.NewGuid()
+                Email = "a@b.com", OtpToken = "1234"
             }));
     }
 
@@ -168,7 +168,7 @@ public class OnboardingServiceTests
         await Assert.ThrowsAsync<InvalidOtpException>(
             () => CreateSut().VerifyUserEmailAsync(new VerifyUserEmailRequest
             {
-                Email = "ghost@test.com", OtpToken = "1234", TenantId = tenantId
+                Email = "ghost@test.com", OtpToken = "1234"
             }));
     }
 
@@ -188,7 +188,7 @@ public class OnboardingServiceTests
         await Assert.ThrowsAsync<InvalidOtpException>(
             () => CreateSut().VerifyUserEmailAsync(new VerifyUserEmailRequest
             {
-                Email = user.Email, OtpToken = "wrong", TenantId = tenantId
+                Email = user.Email, OtpToken = "wrong"
             }));
     }
 
@@ -210,7 +210,7 @@ public class OnboardingServiceTests
         await Assert.ThrowsAsync<InvalidOtpException>(
             () => CreateSut().VerifyUserEmailAsync(new VerifyUserEmailRequest
             {
-                Email = user.Email, OtpToken = "1234", TenantId = tenantId
+                Email = user.Email, OtpToken = "1234"
             }));
     }
 
