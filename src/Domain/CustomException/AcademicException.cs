@@ -15,3 +15,7 @@ public class DuplicateAcademicYearException(string message) : Exception(message)
 public class DuplicateClassNameException(string message) : Exception(message);
 
 public class DuplicateSubjectCodeException(string message) : Exception(message);
+
+public class TermDateOutOfRangeException(string message) : Exception(message);
+
+public class PeriodTimeConflictException(string message) : Exception(message);

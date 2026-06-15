@@ -37,9 +37,10 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             DuplicateAcademicYearException ex => (HttpStatusCode.Conflict, ex.Message),
             DuplicateClassNameException ex => (HttpStatusCode.Conflict, ex.Message),
             DuplicateSubjectCodeException ex => (HttpStatusCode.Conflict, ex.Message),
-
+            TermDateOutOfRangeException ex => (HttpStatusCode.UnprocessableEntity, ex.Message),
+            PeriodTimeConflictException ex => (HttpStatusCode.Conflict, ex.Message),
             _ => (HttpStatusCode.InternalServerError,
-                                          "An unexpected error occurred")
+                                          "An unexpected error occurred. we are working to fix it.")
         };
         // Log the error (only log full details for 500s)
         if (statusCode == HttpStatusCode.InternalServerError)

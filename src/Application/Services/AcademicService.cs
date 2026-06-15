@@ -3,6 +3,7 @@ using SchoolMaster.Application.Repositories;
 using SchoolMaster.Application.DTOs;
 using SchoolMaster.Domain.Entities;
 using SchoolMaster.Domain.CustomException;
+using SchoolMaster.Domain.Enums;
 
 namespace SchoolMaster.Application.Services;
 
@@ -78,6 +79,12 @@ public class AcademicService : IAcademicService
         {
             throw new AcademicYearNotFoundException($"Academic year {request.AcademicYearId} not found.");
         }
+
+        // Term dates must sit inside the academic year's window
+        if (request.StartDate < year.StartDate || request.EndDate > year.EndDate)
+            throw new TermDateOutOfRangeException(
+                $"Term dates must fall within the academic year window ({year.StartDate} to {year.EndDate}).");
+
         // If the new term is to be set as current, unset the existing current term for that academic year
         if (request.SetAsCurrent)
         {
@@ -176,14 +183,34 @@ public class AcademicService : IAcademicService
         var cls = await _classRepo.GetByIdAsync(classId)
             ?? throw new ClassNotFoundException($"Class {classId} not found.");
 
-        if (request.SubjectId.HasValue)
+        string periodName;
+        if (request.Type == PeriodType.Timetabled)
         {
-            _ = await _subjectRepo.GetByIdAsync(request.SubjectId.Value)
+            var subject = await _subjectRepo.GetByIdAsync(request.SubjectId!.Value)
                 ?? throw new SubjectNotFoundException($"Subject {request.SubjectId} not found.");
+            periodName = request.Name ?? subject.Name;
+        }
+        else if (request.Type == PeriodType.DailyRegister)
+        {
+            periodName = request.Name ?? "Morning Register";
+        }
+        else
+        {
+            // NonAcademic — validator guarantees Name is present
+            periodName = request.Name!;
         }
 
+        // Conflict check — no two periods on the same day may overlap in time
+        var existingPeriods = await _periodRepo.GetPeriodsByClassAndDayAsync(classId, request.DayOfWeek);
+        var hasConflict = existingPeriods.Any(p =>
+            request.StartTime < p.EndTime && request.EndTime > p.StartTime);
+
+        if (hasConflict)
+            throw new PeriodTimeConflictException(
+                $"A period already exists on {request.DayOfWeek} that overlaps {request.StartTime}–{request.EndTime}.");
+
         var period = Period.Create(tenantId, classId, request.SubjectId, request.TeacherId,
-            request.DayOfWeek, request.StartTime, request.EndTime, request.Type, request.Name);
+            request.DayOfWeek, request.StartTime, request.EndTime, request.Type, periodName);
         await _periodRepo.AddAsync(period);
 
         var allPeriods = await _periodRepo.GetPeriodsByClassIdAsync(classId);

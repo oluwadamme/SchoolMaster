@@ -1,4 +1,10 @@
 @SchoolMaster_HostAddress = http://localhost:7001
+@tenantSubdomain = susie.academy.edu
+@token = <paste-jwt-token-here>
+@academicYearId = <paste-academic-year-id-here>
+@termId = <paste-term-id-here>
+@classId = <paste-class-id-here>
+@subjectId = <paste-subject-id-here>
 
 GET {{SchoolMaster_HostAddress}}/weatherforecast/
 Accept: application/json
@@ -62,3 +68,172 @@ X-Tenant-Subdomain: susie.academy.edu
 
 "email": "susanojone@gmail.com",
   "password": "NewSecurePassword123!",
+
+
+########## ACADEMIC API ##########
+
+### ── Academic Years ───────────────────────────────────────────────
+
+### Create academic year
+POST {{SchoolMaster_HostAddress}}/api/v1/academic/years
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "name": "2025/2026",
+  "startDate": "2025-09-01",
+  "endDate": "2026-07-31",
+  "setAsCurrent": true
+}
+
+### Get academic years (paginated)
+GET {{SchoolMaster_HostAddress}}/api/v1/academic/years?page=1&pageSize=20
+Accept: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+### ── Terms ────────────────────────────────────────────────────────
+
+### Create term
+POST {{SchoolMaster_HostAddress}}/api/v1/academic/terms
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "academicYearId": "{{academicYearId}}",
+  "name": "First Term",
+  "termNumber": 1,
+  "startDate": "2025-09-01",
+  "endDate": "2025-12-20",
+  "setAsCurrent": true
+}
+
+### Get terms by academic year
+GET {{SchoolMaster_HostAddress}}/api/v1/academic/years/{{academicYearId}}/terms
+Accept: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+### ── Classes ──────────────────────────────────────────────────────
+
+### Create class
+POST {{SchoolMaster_HostAddress}}/api/v1/academic/classes
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "name": "JSS 1A",
+  "formTeacherId": null
+}
+
+### Get classes (paginated)
+GET {{SchoolMaster_HostAddress}}/api/v1/academic/classes?page=1&pageSize=20
+Accept: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+### ── Subjects ─────────────────────────────────────────────────────
+
+### Create subject
+POST {{SchoolMaster_HostAddress}}/api/v1/academic/subjects
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "name": "Mathematics",
+  "code": "MATH"
+}
+
+### Create subject — no code (optional field)
+POST {{SchoolMaster_HostAddress}}/api/v1/academic/subjects
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "name": "English Language",
+  "code": null
+}
+
+### Get subjects (paginated)
+GET {{SchoolMaster_HostAddress}}/api/v1/academic/subjects?page=1&pageSize=20
+Accept: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+### ── Timetable (Periods) ──────────────────────────────────────────
+
+### Add timetabled period — name defaults to subject name
+POST {{SchoolMaster_HostAddress}}/api/v1/academic/classes/{{classId}}/periods
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "subjectId": "{{subjectId}}",
+  "teacherId": null,
+  "dayOfWeek": "Monday",
+  "startTime": "08:00:00",
+  "endTime": "09:00:00",
+  "type": "Timetabled",
+  "name": null
+}
+
+### Add timetabled period — custom name override
+POST {{SchoolMaster_HostAddress}}/api/v1/academic/classes/{{classId}}/periods
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "subjectId": "{{subjectId}}",
+  "teacherId": null,
+  "dayOfWeek": "Tuesday",
+  "startTime": "08:00:00",
+  "endTime": "09:00:00",
+  "type": "Timetabled",
+  "name": "Advanced Maths"
+}
+
+### Add daily register period — name defaults to "Morning Register"
+POST {{SchoolMaster_HostAddress}}/api/v1/academic/classes/{{classId}}/periods
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "subjectId": null,
+  "teacherId": null,
+  "dayOfWeek": "Monday",
+  "startTime": "07:45:00",
+  "endTime": "08:00:00",
+  "type": "DailyRegister",
+  "name": null
+}
+
+### Add non-academic period (break, lunch, prep — name required)
+POST {{SchoolMaster_HostAddress}}/api/v1/academic/classes/{{classId}}/periods
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "subjectId": null,
+  "teacherId": null,
+  "dayOfWeek": "Monday",
+  "startTime": "10:30:00",
+  "endTime": "10:45:00",
+  "type": "NonAcademic",
+  "name": "Break"
+}
+
+### Get class timetable
+GET {{SchoolMaster_HostAddress}}/api/v1/academic/classes/{{classId}}/timetable
+Accept: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+

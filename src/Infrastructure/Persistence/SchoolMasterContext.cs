@@ -11,6 +11,14 @@ namespace SchoolMaster.Infrastructure.Persistence;
 public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, ICurrentTenant _currentTenant) : DbContext(options)
 {
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<Enum>()
+            .HaveConversion<string>()
+            .HaveColumnType("text");
+    }
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

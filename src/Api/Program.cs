@@ -190,8 +190,9 @@ try
             }
         }
     }
-    app.UseMiddleware<TenantResolverMiddleware>();
+
     app.UseMiddleware<ExceptionMiddleware>();
+    app.UseMiddleware<TenantResolverMiddleware>();
     app.UseMiddleware<UnitOfWorkMiddleware>();
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()

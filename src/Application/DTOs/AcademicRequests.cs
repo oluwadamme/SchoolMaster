@@ -38,7 +38,7 @@ public record CreatePeriodRequest(
     TimeOnly StartTime,
     TimeOnly EndTime,
     PeriodType Type,
-    string Name
+    string? Name
 );
 
 // src/Application/Validators/CreateAcademicYearRequestValidator.cs
@@ -92,12 +92,10 @@ public class CreatePeriodRequestValidator : AbstractValidator<CreatePeriodReques
 {
     public CreatePeriodRequestValidator()
     {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
         RuleFor(x => x.EndTime)
             .GreaterThan(x => x.StartTime)
             .WithMessage("End time must be after start time.");
 
-        // For Timetabled periods, SubjectId and TeacherId are required
         When(x => x.Type == PeriodType.Timetabled, () =>
         {
             RuleFor(x => x.SubjectId)
@@ -106,6 +104,21 @@ public class CreatePeriodRequestValidator : AbstractValidator<CreatePeriodReques
             RuleFor(x => x.TeacherId)
                 .NotNull()
                 .WithMessage("TeacherId is required for timetabled periods.");
+        });
+
+        // NonAcademic periods have no subject or default name — the user must supply one
+        When(x => x.Type == PeriodType.NonAcademic, () =>
+        {
+            RuleFor(x => x.Name)
+                .NotEmpty()
+                .WithMessage("Name is required for non-academic periods (e.g. Break, Lunch, Prep).")
+                .MaximumLength(100);
+        });
+
+        // For Timetabled and DailyRegister, Name is optional but bounded if provided
+        When(x => x.Type != PeriodType.NonAcademic && x.Name is not null, () =>
+        {
+            RuleFor(x => x.Name).MaximumLength(100);
         });
     }
 }

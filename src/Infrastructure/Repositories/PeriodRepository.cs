@@ -15,6 +15,7 @@ public class PeriodRepository : IPeriodRepository
     public async Task AddAsync(Period period)
     {
         await _context.Periods.AddAsync(period);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<List<Period>> GetPeriodsByClassAndDayAsync(Guid classId, DayOfWeek day)
@@ -27,6 +28,9 @@ public class PeriodRepository : IPeriodRepository
 
     public async Task<List<Period>> GetPeriodsByClassIdAsync(Guid classId)
     {
-        return await _context.Periods.Where(p => p.ClassId == classId).Include(p => p.Subject).OrderBy(p => p.StartTime).ToListAsync();
+        return await _context.Periods
+        .Where(p => p.ClassId == classId)
+        .Include(p => p.Subject)
+        .OrderBy(p => p.StartTime).ToListAsync();
     }
 }
