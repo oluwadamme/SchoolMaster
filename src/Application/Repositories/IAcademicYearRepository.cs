@@ -7,7 +7,7 @@ public interface IAcademicYearRepository
     Task AddAsync(AcademicYear year);
     Task<AcademicYear?> GetByIdAsync(Guid id);
     Task<AcademicYear?> GetCurrentAsync();
-    Task<List<AcademicYear>> GetAllAsync();
+    Task<(List<AcademicYear> Items, int TotalCount)> GetAllAsync(int page, int pageSize);
     Task<bool> ExistsByNameAsync(string name);
     Task UpdateAsync(AcademicYear year);
 

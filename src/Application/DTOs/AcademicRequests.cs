@@ -32,7 +32,6 @@ public record CreateSubjectRequest(
 
 
 public record CreatePeriodRequest(
-    Guid ClassId,
     Guid? SubjectId,
     Guid? TeacherId,
     DayOfWeek DayOfWeek,
@@ -93,7 +92,6 @@ public class CreatePeriodRequestValidator : AbstractValidator<CreatePeriodReques
 {
     public CreatePeriodRequestValidator()
     {
-        RuleFor(x => x.ClassId).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
         RuleFor(x => x.EndTime)
             .GreaterThan(x => x.StartTime)

@@ -31,6 +31,13 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             InvalidCredentialsException ex => (HttpStatusCode.Unauthorized, ex.Message),
             UnauthorizedAccessException ex => (HttpStatusCode.Unauthorized, ex.Message),
             KeyNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
+            AcademicYearNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
+            ClassNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
+            SubjectNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
+            DuplicateAcademicYearException ex => (HttpStatusCode.Conflict, ex.Message),
+            DuplicateClassNameException ex => (HttpStatusCode.Conflict, ex.Message),
+            DuplicateSubjectCodeException ex => (HttpStatusCode.Conflict, ex.Message),
+
             _ => (HttpStatusCode.InternalServerError,
                                           "An unexpected error occurred")
         };

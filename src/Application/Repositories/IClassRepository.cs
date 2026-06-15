@@ -6,6 +6,6 @@ public interface IClassRepository
 {
     Task AddAsync(Class cls);
     Task<Class?> GetByIdAsync(Guid id);
-    Task<List<Class>> GetAllAsync();
+    Task<(List<Class> Items, int TotalCount)> GetAllAsync(int page, int pageSize);
     Task<bool> ExistsByNameAsync(string name);
 }

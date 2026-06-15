@@ -2,6 +2,7 @@
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Domain.Entities;
 using SchoolMaster.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 public class AcademicYearRepository : IAcademicYearRepository
 {
     private readonly SchoolMasterContext _context;
@@ -19,8 +20,16 @@ public class AcademicYearRepository : IAcademicYearRepository
     public async Task<AcademicYear?> GetCurrentAsync() =>
         await _context.AcademicYears.FirstOrDefaultAsync(y => y.IsCurrent);
 
-    public async Task<List<AcademicYear>> GetAllAsync() =>
-        await _context.AcademicYears.OrderByDescending(y => y.StartDate).ToListAsync();
+    public async Task<(List<AcademicYear> Items, int TotalCount)> GetAllAsync(int page, int pageSize)
+    {
+        var totalCount = await _context.AcademicYears.CountAsync();
+        var items = await _context.AcademicYears
+            .OrderByDescending(y => y.StartDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        return (items, totalCount);
+    }
 
     public async Task<bool> ExistsByNameAsync(string name) =>
         await _context.AcademicYears.AnyAsync(y => y.Name == name);
@@ -28,7 +37,6 @@ public class AcademicYearRepository : IAcademicYearRepository
     public async Task UpdateAsync(AcademicYear year)
     {
         _context.AcademicYears.Update(year);
-
     }
 
     public async Task AddTermAsync(Term term)
@@ -48,8 +56,9 @@ public class AcademicYearRepository : IAcademicYearRepository
             .OrderBy(t => t.TermNumber)
             .ToListAsync();
 
-    public async Task UpdateTermAsync(Term term)
+    public Task UpdateTermAsync(Term term)
     {
         _context.Terms.Update(term);
+        return Task.CompletedTask;
     }
 }

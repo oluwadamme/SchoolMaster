@@ -1,5 +1,6 @@
 using SchoolMaster.Api.Middlewares;
 using SchoolMaster.Application.Services.Interfaces;
+using SchoolMaster.Infrastructure.Repositories;
 using Serilog;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -56,6 +57,12 @@ try
     builder.Services.AddScoped<IJwtService, JwtService>();
     builder.Services.AddScoped<IOtpService, OtpService>();
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+    builder.Services.AddScoped<IAcademicService, AcademicService>();
+    builder.Services.AddScoped<IAcademicYearRepository, AcademicYearRepository>();
+    builder.Services.AddScoped<IClassRepository, ClassRepository>();
+    builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
+    builder.Services.AddScoped<IPeriodRepository, PeriodRepository>();
+
 
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));

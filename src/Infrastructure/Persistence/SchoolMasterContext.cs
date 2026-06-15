@@ -109,8 +109,6 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
         modelBuilder.Entity<Period>()
             .HasQueryFilter(p => p.TenantId == _currentTenant.Id);
 
-
-
     }
 
     public DbSet<User> Users { get; set; }

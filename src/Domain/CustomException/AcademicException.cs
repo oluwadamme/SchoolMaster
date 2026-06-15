@@ -13,3 +13,5 @@ public class DuplicateAcademicYearException(string message) : Exception(message)
 
 
 public class DuplicateClassNameException(string message) : Exception(message);
+
+public class DuplicateSubjectCodeException(string message) : Exception(message);

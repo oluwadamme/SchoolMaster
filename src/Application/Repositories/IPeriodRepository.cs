@@ -5,6 +5,6 @@ using SchoolMaster.Domain.Entities;
 public interface IPeriodRepository
 {
     Task AddAsync(Period period);
-    Task<List<Period>> GetByClassIdAsync(Guid classId);
-    Task<List<Period>> GetByClassAndDayAsync(Guid classId, DayOfWeek day);
+    Task<List<Period>> GetPeriodsByClassIdAsync(Guid classId);
+    Task<List<Period>> GetPeriodsByClassAndDayAsync(Guid classId, DayOfWeek day);
 }
