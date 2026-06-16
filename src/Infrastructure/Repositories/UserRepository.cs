@@ -33,12 +33,16 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetUserByEmailAndTenantIdAsync(string email, Guid tenantId)
     {
         return await _context.Users
-            .FirstOrDefaultAsync(x => x.Email == email && x.TenantId == tenantId);
+            .FirstOrDefaultAsync(x => x.Email == email);
     }
 
     public async Task<User?> GetUserByIdAsync(Guid userId, Guid tenantId)
     {
+        // IgnoreQueryFilters: the refresh-token endpoint has no [Authorize] attribute, so
+        // httpContext.User carries no tenant_id claim and the global filter would return Guid.Empty,
+        // blocking the lookup. The explicit tenantId parameter provides the isolation guarantee.
         return await _context.Users
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId && x.Status == UserStatus.Active);
     }
 
