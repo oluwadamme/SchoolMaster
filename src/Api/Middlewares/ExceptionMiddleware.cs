@@ -31,8 +31,19 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             InvalidCredentialsException ex => (HttpStatusCode.Unauthorized, ex.Message),
             UnauthorizedAccessException ex => (HttpStatusCode.Unauthorized, ex.Message),
             KeyNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
+            AcademicYearNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
+            TermNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
+            ClassNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
+            SubjectNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
+            PeriodNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
+            DuplicateAcademicYearException ex => (HttpStatusCode.Conflict, ex.Message),
+            DuplicateClassNameException ex => (HttpStatusCode.Conflict, ex.Message),
+            DuplicateSubjectCodeException ex => (HttpStatusCode.Conflict, ex.Message),
+            TermDateOutOfRangeException ex => (HttpStatusCode.UnprocessableEntity, ex.Message),
+            TermDateOverlapException ex => (HttpStatusCode.UnprocessableEntity, ex.Message),
+            PeriodTimeConflictException ex => (HttpStatusCode.Conflict, ex.Message),
             _ => (HttpStatusCode.InternalServerError,
-                                          "An unexpected error occurred")
+                                          "An unexpected error occurred. we are working to fix it.")
         };
         // Log the error (only log full details for 500s)
         if (statusCode == HttpStatusCode.InternalServerError)
