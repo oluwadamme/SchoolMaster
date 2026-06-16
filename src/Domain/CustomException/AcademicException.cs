@@ -18,4 +18,10 @@ public class DuplicateSubjectCodeException(string message) : Exception(message);
 
 public class TermDateOutOfRangeException(string message) : Exception(message);
 
+public class TermDateOverlapException(string message) : Exception(message);
+
+public class TermNotFoundException(string message) : Exception(message);
+
+public class PeriodNotFoundException(string message) : Exception(message);
+
 public class PeriodTimeConflictException(string message) : Exception(message);

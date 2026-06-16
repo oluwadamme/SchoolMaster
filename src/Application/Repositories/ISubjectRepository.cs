@@ -8,5 +8,5 @@ public interface ISubjectRepository
     Task<Subject?> GetByIdAsync(Guid id);
     Task<(List<Subject> Items, int TotalCount)> GetAllAsync(int page, int pageSize);
     Task<bool> ExistsByNameAsync(string name);
-    Task<bool> ExistsByCodeAsync(string code);
+    Task UpdateAsync(Subject subject);
 }

@@ -34,4 +34,12 @@ public class Term
 
     public void SetAsCurrent() => IsCurrent = true;
     public void UnsetCurrent() => IsCurrent = false;
+
+    public void Update(string name, int termNumber, DateOnly startDate, DateOnly endDate)
+    {
+        Name = name;
+        TermNumber = termNumber;
+        StartDate = startDate;
+        EndDate = endDate;
+    }
 }

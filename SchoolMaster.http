@@ -237,3 +237,142 @@ Accept: application/json
 Authorization: Bearer {{token}}
 X-Tenant-Subdomain: {{tenantSubdomain}}
 
+########## ACADEMIC UPDATE ENDPOINTS (PATCH) ##########
+
+### ── Update academic year ────────────────────────────────────────────────────
+
+### Rename and extend an academic year
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/years/{{academicYearId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "name": "2025/2026 Revised",
+  "startDate": "2025-09-01",
+  "endDate": "2026-08-15",
+  "setAsCurrent": null
+}
+
+### Set a different academic year as current (omit fields you are not changing)
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/years/{{academicYearId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "setAsCurrent": true
+}
+
+### ── Update term ──────────────────────────────────────────────────────────────
+
+### Extend a term's end date only
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/terms/{{termId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "endDate": "2025-12-31"
+}
+
+### Rename and set a term as current
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/terms/{{termId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "name": "Autumn Term",
+  "setAsCurrent": true
+}
+
+### ── Update class ─────────────────────────────────────────────────────────────
+
+### Rename a class (form teacher stays unchanged — field omitted)
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/classes/{{classId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "name": "JSS 1B"
+}
+
+### Assign a form teacher (name stays unchanged — field omitted)
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/classes/{{classId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "formTeacherId": "00000000-0000-0000-0000-000000000001"
+}
+
+### Clear form teacher explicitly (null with field present = clear)
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/classes/{{classId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "formTeacherId": null
+}
+
+### ── Update subject ───────────────────────────────────────────────────────────
+
+### Rename a subject
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/subjects/{{subjectId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "name": "Further Mathematics"
+}
+
+### Clear a subject's shortcode (null with field present = clear)
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/subjects/{{subjectId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "code": null
+}
+
+### ── Update period ────────────────────────────────────────────────────────────
+
+@periodId = <paste-period-id-here>
+
+### Shift a period's time slot (everything else stays)
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/classes/{{classId}}/periods/{{periodId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "startTime": "09:00:00",
+  "endTime": "10:00:00"
+}
+
+### Reassign a period to a different subject
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/classes/{{classId}}/periods/{{periodId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "subjectId": "00000000-0000-0000-0000-000000000002"
+}
+
+### Remove teacher assignment from a period (null with field present = clear)
+PATCH {{SchoolMaster_HostAddress}}/api/v1/academic/classes/{{classId}}/periods/{{periodId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Subdomain: {{tenantSubdomain}}
+
+{
+  "teacherId": null
+}
+

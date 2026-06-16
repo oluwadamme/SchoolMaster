@@ -15,22 +15,37 @@ public class PeriodRepository : IPeriodRepository
     public async Task AddAsync(Period period)
     {
         await _context.Periods.AddAsync(period);
-        await _context.SaveChangesAsync();
     }
 
-    public async Task<List<Period>> GetPeriodsByClassAndDayAsync(Guid classId, DayOfWeek day)
+    public async Task<Period?> GetByIdAsync(Guid id)
     {
         return await _context.Periods
-        .Where(p => p.ClassId == classId && p.DayOfWeek == day)
-        .Include(p => p.Subject)
-        .OrderBy(p => p.StartTime).ToListAsync();
+            .Include(p => p.Subject)
+            .FirstOrDefaultAsync(p => p.Id == id);
+    }
+
+    public async Task<List<Period>> GetPeriodsByClassAndDayAsync(Guid classId, DayOfWeek day, Guid? excludePeriodId = null)
+    {
+        return await _context.Periods
+            .Where(p => p.ClassId == classId && p.DayOfWeek == day &&
+                        (excludePeriodId == null || p.Id != excludePeriodId))
+            .Include(p => p.Subject)
+            .OrderBy(p => p.StartTime)
+            .ToListAsync();
     }
 
     public async Task<List<Period>> GetPeriodsByClassIdAsync(Guid classId)
     {
         return await _context.Periods
-        .Where(p => p.ClassId == classId)
-        .Include(p => p.Subject)
-        .OrderBy(p => p.StartTime).ToListAsync();
+            .Where(p => p.ClassId == classId)
+            .Include(p => p.Subject)
+            .OrderBy(p => p.StartTime)
+            .ToListAsync();
+    }
+
+    public Task UpdateAsync(Period period)
+    {
+        _context.Periods.Update(period);
+        return Task.CompletedTask;
     }
 }

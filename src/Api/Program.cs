@@ -22,6 +22,7 @@ using SchoolMaster.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Npgsql;
 using System.Text.Json;
+using SchoolMaster.Api.Converters;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -42,6 +43,7 @@ try
         .AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+            options.JsonSerializerOptions.Converters.Add(new OptionalConverterFactory());
         });
     // 1. Tell ASP.NET Core to auto-validate requests using FluentValidation
     builder.Services.AddFluentValidationAutoValidation();

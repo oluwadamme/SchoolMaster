@@ -17,6 +17,12 @@ public interface IAcademicService
     Task<BaseResponse<SubjectResponse>> CreateSubjectAsync(CreateSubjectRequest request);
     Task<BaseResponse<PagedResponse<SubjectResponse>>> GetSubjectsAsync(int page, int pageSize);
 
-    Task<BaseResponse<TimetableResponse>> CreatePeriodAsync(Guid classId, CreatePeriodRequest request);
+    Task<BaseResponse<PeriodResponse>> CreatePeriodAsync(Guid classId, CreatePeriodRequest request);
     Task<BaseResponse<TimetableResponse>> GetTimetableAsync(Guid classId);
+
+    Task<BaseResponse<AcademicYearResponse>> UpdateAcademicYearAsync(Guid yearId, UpdateAcademicYearRequest request);
+    Task<BaseResponse<TermResponse>> UpdateTermAsync(Guid termId, UpdateTermRequest request);
+    Task<BaseResponse<ClassResponse>> UpdateClassAsync(Guid classId, UpdateClassRequest request);
+    Task<BaseResponse<SubjectResponse>> UpdateSubjectAsync(Guid subjectId, UpdateSubjectRequest request);
+    Task<BaseResponse<PeriodResponse>> UpdatePeriodAsync(Guid classId, Guid periodId, UpdatePeriodRequest request);
 }

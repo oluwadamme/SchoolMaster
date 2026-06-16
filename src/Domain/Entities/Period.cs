@@ -38,4 +38,16 @@ public class Period
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    public void Update(Guid? subjectId, Guid? teacherId, DayOfWeek dayOfWeek,
+        TimeOnly startTime, TimeOnly endTime, PeriodType type, string name)
+    {
+        SubjectId = subjectId;
+        TeacherId = teacherId;
+        DayOfWeek = dayOfWeek;
+        StartTime = startTime;
+        EndTime = endTime;
+        Type = type;
+        Name = name;
+    }
 }

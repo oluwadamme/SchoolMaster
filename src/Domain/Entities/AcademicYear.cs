@@ -29,4 +29,11 @@ public class AcademicYear
 
     public void SetAsCurrent() => IsCurrent = true;
     public void UnsetCurrent() => IsCurrent = false;
+
+    public void Update(string name, DateOnly startDate, DateOnly endDate)
+    {
+        Name = name;
+        StartDate = startDate;
+        EndDate = endDate;
+    }
 }

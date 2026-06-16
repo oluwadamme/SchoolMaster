@@ -30,10 +30,9 @@ public class AcademicController : ControllerBase
     [HasPermission(Permission.AcademicManage)]
     [HttpGet("years")]
     public async Task<ActionResult<BaseResponse<PagedResponse<AcademicYearResponse>>>> GetAcademicYears(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] PaginationRequest pagination)
     {
-        var result = await _academicService.GetAcademicYearsAsync(page, pageSize);
+        var result = await _academicService.GetAcademicYearsAsync(pagination.Page, pagination.PageSize);
         return Ok(result);
     }
 
@@ -66,10 +65,9 @@ public class AcademicController : ControllerBase
     [HasPermission(Permission.AcademicManage)]
     [HttpGet("classes")]
     public async Task<ActionResult<BaseResponse<PagedResponse<ClassResponse>>>> GetClasses(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] PaginationRequest pagination)
     {
-        var result = await _academicService.GetClassesAsync(page, pageSize);
+        var result = await _academicService.GetClassesAsync(pagination.Page, pagination.PageSize);
         return Ok(result);
     }
 
@@ -85,16 +83,15 @@ public class AcademicController : ControllerBase
     [HasPermission(Permission.AcademicManage)]
     [HttpGet("subjects")]
     public async Task<ActionResult<BaseResponse<PagedResponse<SubjectResponse>>>> GetSubjects(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] PaginationRequest pagination)
     {
-        var result = await _academicService.GetSubjectsAsync(page, pageSize);
+        var result = await _academicService.GetSubjectsAsync(pagination.Page, pagination.PageSize);
         return Ok(result);
     }
 
     [HasPermission(Permission.AcademicManage)]
     [HttpPost("classes/{classId:guid}/periods")]
-    public async Task<ActionResult<BaseResponse<TimetableResponse>>> CreatePeriod(
+    public async Task<ActionResult<BaseResponse<PeriodResponse>>> CreatePeriod(
         Guid classId,
         [FromBody] CreatePeriodRequest request)
     {
@@ -110,5 +107,48 @@ public class AcademicController : ControllerBase
         return Ok(result);
     }
 
+    [HasPermission(Permission.AcademicManage)]
+    [HttpPatch("years/{yearId:guid}")]
+    public async Task<ActionResult<BaseResponse<AcademicYearResponse>>> UpdateAcademicYear(
+        Guid yearId, [FromBody] UpdateAcademicYearRequest request)
+    {
+        var result = await _academicService.UpdateAcademicYearAsync(yearId, request);
+        return Ok(result);
+    }
 
+    [HasPermission(Permission.AcademicManage)]
+    [HttpPatch("terms/{termId:guid}")]
+    public async Task<ActionResult<BaseResponse<TermResponse>>> UpdateTerm(
+        Guid termId, [FromBody] UpdateTermRequest request)
+    {
+        var result = await _academicService.UpdateTermAsync(termId, request);
+        return Ok(result);
+    }
+
+    [HasPermission(Permission.AcademicManage)]
+    [HttpPatch("classes/{classId:guid}")]
+    public async Task<ActionResult<BaseResponse<ClassResponse>>> UpdateClass(
+        Guid classId, [FromBody] UpdateClassRequest request)
+    {
+        var result = await _academicService.UpdateClassAsync(classId, request);
+        return Ok(result);
+    }
+
+    [HasPermission(Permission.AcademicManage)]
+    [HttpPatch("subjects/{subjectId:guid}")]
+    public async Task<ActionResult<BaseResponse<SubjectResponse>>> UpdateSubject(
+        Guid subjectId, [FromBody] UpdateSubjectRequest request)
+    {
+        var result = await _academicService.UpdateSubjectAsync(subjectId, request);
+        return Ok(result);
+    }
+
+    [HasPermission(Permission.AcademicManage)]
+    [HttpPatch("classes/{classId:guid}/periods/{periodId:guid}")]
+    public async Task<ActionResult<BaseResponse<PeriodResponse>>> UpdatePeriod(
+        Guid classId, Guid periodId, [FromBody] UpdatePeriodRequest request)
+    {
+        var result = await _academicService.UpdatePeriodAsync(classId, periodId, request);
+        return Ok(result);
+    }
 }

@@ -37,6 +37,11 @@ public class ClassRepository : IClassRepository
     public async Task<Class?> GetByIdAsync(Guid id)
     {
         return await _context.Classes.FirstOrDefaultAsync(c => c.Id == id);
+    }
 
+    public Task UpdateAsync(Class cls)
+    {
+        _context.Classes.Update(cls);
+        return Task.CompletedTask;
     }
 }

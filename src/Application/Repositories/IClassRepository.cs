@@ -8,4 +8,5 @@ public interface IClassRepository
     Task<Class?> GetByIdAsync(Guid id);
     Task<(List<Class> Items, int TotalCount)> GetAllAsync(int page, int pageSize);
     Task<bool> ExistsByNameAsync(string name);
+    Task UpdateAsync(Class cls);
 }

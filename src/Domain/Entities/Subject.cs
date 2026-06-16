@@ -20,4 +20,10 @@ public class Subject
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    public void Update(string name, string? code)
+    {
+        Name = name;
+        Code = code;
+    }
 }

@@ -22,4 +22,10 @@ public class Class
     }
 
     public void AssignFormTeacher(Guid teacherId) => FormTeacherId = teacherId;
+
+    public void Update(string name, Guid? formTeacherId)
+    {
+        Name = name;
+        FormTeacherId = formTeacherId;
+    }
 }
