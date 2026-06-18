@@ -27,4 +27,9 @@ public class TenantRepository : ITenantRepository
     {
         return await _context.Tenants.FirstOrDefaultAsync(x => x.Subdomain == subdomain);
     }
+
+    public async Task<Tenant?> GetByIdAsync(Guid tenantId)
+    {
+        return await _context.Tenants.FirstOrDefaultAsync(x => x.Id == tenantId);
+    }
 }

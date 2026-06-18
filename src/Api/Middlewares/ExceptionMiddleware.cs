@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using SchoolMaster.Application.DTOs;
 using SchoolMaster.Domain.CustomException;
 namespace SchoolMaster.Api.Middlewares;
@@ -42,6 +44,12 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             TermDateOutOfRangeException ex => (HttpStatusCode.UnprocessableEntity, ex.Message),
             TermDateOverlapException ex => (HttpStatusCode.UnprocessableEntity, ex.Message),
             PeriodTimeConflictException ex => (HttpStatusCode.Conflict, ex.Message),
+            DuplicateAttendanceException ex => (HttpStatusCode.Conflict, ex.Message),
+            StudentNotInClassException ex => (HttpStatusCode.UnprocessableEntity, ex.Message),
+            // Catches concurrent write race conditions that bypass the in-memory upsert check.
+            // PostgreSQL error code 23505 = unique_violation.
+            DbUpdateException { InnerException: PostgresException { SqlState: "23505" } }
+                => (HttpStatusCode.Conflict, "A duplicate record already exists."),
             _ => (HttpStatusCode.InternalServerError,
                                           "An unexpected error occurred. we are working to fix it.")
         };
@@ -54,7 +62,17 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         {
             logger.LogWarning("Handled exception: {Message}", exception.Message);
         }
+        // If the response has already begun streaming, we cannot rewrite the status or body.
+        // Bail rather than throw a secondary "response already started" exception that would
+        // mask the real error.
+        if (context.Response.HasStarted)
+        {
+            logger.LogError(exception, "Response already started; unable to write error response.");
+            return;
+        }
+
         // Write the response
+        context.Response.Clear();
         context.Response.StatusCode = (int)statusCode;
         context.Response.ContentType = "application/json";
         var response = new BaseResponse<object>(false, message, default);
