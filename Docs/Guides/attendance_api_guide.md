@@ -355,21 +355,18 @@ This runs **outside the HTTP request**, in a separate Hangfire worker thread, po
 ```csharp
 public async Task SendAsync(Guid tenantId, Guid studentId, DateOnly date)
 {
-    var studentTask = studentRepo.GetStudentByIdIgnoringFiltersAsync(studentId, tenantId);
-    var tenantTask  = tenantRepo.GetByIdAsync(tenantId);
-    await Task.WhenAll(studentTask, tenantTask);
-
-    var student = studentTask.Result;
+    var student = await studentRepo.GetStudentByIdIgnoringFiltersAsync(studentId, tenantId);
     if (student is null) return;
 
-    var schoolName = tenantTask.Result?.Name ?? "SchoolMaster";
+    var tenant = await tenantRepo.GetByIdAsync(tenantId);
+    var schoolName = tenant?.Name ?? "SchoolMaster";
     // build email and send...
 }
 ```
 
 Two things to notice:
 
-**Parallel queries.** The student and tenant lookups are independent — neither needs the other's result to start. `Task.WhenAll` runs them at the same time. Using `.Result` after `WhenAll` is safe because both tasks are already completed by that point — it reads a resolved value, it does not block.
+**Sequential queries, not parallel.** It is tempting to run the student and tenant lookups at the same time with `Task.WhenAll` since neither needs the other's result. Do not. Both repositories share this job's single scoped `DbContext`, and EF Core forbids two operations running concurrently on one context instance. It throws "a second operation was started on this context before a previous operation completed." The failure is a race, so it can pass under light load and fail under heavy load, which makes it especially dangerous. Real parallel queries would require separate `DbContext` instances via `IDbContextFactory`, which is not worth it for two cheap lookups. The same rule applies in `AttendanceService` when looking up the class and the class roster.
 
 **`IgnoreQueryFilters` variant for the student lookup.** There is no `HttpContext` in a Hangfire job, which means `ICurrentTenant.Id` would return `Guid.Empty`. The global EF Core query filter on `Student` uses `ICurrentTenant.Id`, so a normal query would return nothing. `GetStudentByIdIgnoringFiltersAsync` bypasses the global filter and passes `tenantId` explicitly instead, maintaining tenant isolation without relying on the HTTP context.
 

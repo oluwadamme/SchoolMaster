@@ -15,15 +15,13 @@ public class AbsenceNotificationJob(
         // in this job MUST either target a filter-free entity (Tenant) or bypass the filter with an
         // explicit tenantId (GetStudentByIdIgnoringFiltersAsync). Do not add a plain filtered query here.
 
-        // Both queries are independent — run them in parallel
-        var studentTask = studentRepo.GetStudentByIdIgnoringFiltersAsync(studentId, tenantId);
-        var tenantTask  = tenantRepo.GetByIdAsync(tenantId);
-        await Task.WhenAll(studentTask, tenantTask);
-
-        var student = studentTask.Result;
+        // Sequential, not parallel: both repos share this job's scoped DbContext, and EF Core
+        // forbids concurrent operations on a single context instance.
+        var student = await studentRepo.GetStudentByIdIgnoringFiltersAsync(studentId, tenantId);
         if (student is null) return; // Student withdrawn between marking and job running — skip
 
-        var schoolName = tenantTask.Result?.Name ?? "SchoolMaster";
+        var tenant = await tenantRepo.GetByIdAsync(tenantId);
+        var schoolName = tenant?.Name ?? "SchoolMaster";
 
         var subject = $"Absence Notification — {date:MMMM d, yyyy}";
         var body = $"""

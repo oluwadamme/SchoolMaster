@@ -47,13 +47,13 @@ public class AttendanceService : IAttendanceService
             ?? throw new TermNotFoundException(
                 "No active term is set for the current academic year. Please set a current term before marking attendance.");
 
-        // Run independent lookups in parallel
-        var classTask          = _classRepo.GetByIdAsync(request.ClassId);
-        var studentIdsTask     = _studentRepo.GetStudentIdsByClassIdAsync(request.ClassId);
-        await Task.WhenAll(classTask, studentIdsTask);
-
-        _ = classTask.Result ?? throw new ClassNotFoundException($"Class {request.ClassId} not found.");
-        var validStudentIds = studentIdsTask.Result;
+        // Sequential, not parallel: both queries share the same scoped DbContext, and EF Core
+        // forbids concurrent operations on one context instance ("a second operation was started
+        // on this context before a previous operation completed"). Parallelising here would need
+        // separate DbContext instances, which is not worth it for two cheap lookups.
+        _ = await _classRepo.GetByIdAsync(request.ClassId)
+            ?? throw new ClassNotFoundException($"Class {request.ClassId} not found.");
+        var validStudentIds = await _studentRepo.GetStudentIdsByClassIdAsync(request.ClassId);
 
         foreach (var entry in request.Records)
         {
