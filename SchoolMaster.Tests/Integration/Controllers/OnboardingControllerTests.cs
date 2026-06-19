@@ -77,12 +77,14 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
     }
 
     [Fact]
-    public async Task RegisterTenant_WithDuplicateAdminEmail_Returns409()
+    public async Task RegisterTenant_WithSameAdminEmailAtDifferentSchool_Succeeds()
     {
+        // Email is unique per tenant, not globally. The same person may administer two schools,
+        // so the same admin email registering a different subdomain must be allowed.
         var req = MakeUniqueRequest();
         await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req); // first registration
 
-        // Same adminEmail but different subdomain
+        // Same adminEmail but a different subdomain (a different school)
         var uniquePart = Guid.NewGuid().ToString("N")[..10];
         var req2 = new OnboardTenantRequest
         {
@@ -91,13 +93,13 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
             ContactEmail = $"contact-{uniquePart}@test.com",
             AdminFirstName = req.AdminFirstName,
             AdminLastName = req.AdminLastName,
-            AdminEmail = req.AdminEmail, // same email — causes conflict
+            AdminEmail = req.AdminEmail, // same email, different tenant — now allowed
             AdminPassword = req.AdminPassword,
         };
 
         var response = await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req2);
 
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
     [Fact]

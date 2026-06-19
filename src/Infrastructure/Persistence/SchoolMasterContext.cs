@@ -39,9 +39,11 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
             .IsUnique()
             .HasFilter("\"IsCurrent\" = true");
 
-        // At most one current term per academic year per tenant
+        // At most one current term per academic year per tenant.
+        // The key is (TenantId, AcademicYearId) only — including TermNumber would let two terms
+        // with different numbers both be current at once, which is exactly what we must prevent.
         modelBuilder.Entity<Term>()
-            .HasIndex(t => new { t.TenantId, t.AcademicYearId, t.TermNumber })
+            .HasIndex(t => new { t.TenantId, t.AcademicYearId })
             .IsUnique()
             .HasFilter("\"IsCurrent\" = true");
 

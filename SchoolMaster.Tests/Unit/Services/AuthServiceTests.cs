@@ -48,6 +48,7 @@ public class AuthServiceTests
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
             Roles = [UserRole.Admin],
             IsEmailVerified = true,
+            Status = UserStatus.Active,
         };
     }
 
@@ -80,7 +81,7 @@ public class AuthServiceTests
     {
         const string password = "Test@123!";
         var user = MakeActiveUser(password: password);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, _currentTenant.Object.Id)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
         _jwtService.Setup(j => j.GenerateAccessToken(user)).Returns("access-token");
         _jwtService.Setup(j => j.GenerateRefreshToken()).Returns("refresh-token");
 
@@ -106,7 +107,7 @@ public class AuthServiceTests
     public async Task LoginAsync_WithWrongPassword_ThrowsInvalidCredentialsException()
     {
         var user = MakeActiveUser(password: "CorrectPass@1");
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, _currentTenant.Object.Id)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
 
         await Assert.ThrowsAsync<InvalidCredentialsException>(
             () => CreateSut().LoginAsync(new LoginRequest(user.Email, "WrongPass@1")));
@@ -117,7 +118,7 @@ public class AuthServiceTests
     {
         const string password = "Test@123!";
         var user = MakeActiveUser(password: password);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, _currentTenant.Object.Id)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
         _jwtService.Setup(j => j.GenerateRefreshToken()).Returns("new-refresh");
 
         await CreateSut().LoginAsync(new LoginRequest(user.Email, password));
@@ -125,6 +126,54 @@ public class AuthServiceTests
         _userRepo.Verify(
             r => r.UpdateUserAsync(It.Is<User>(u => u.RefreshToken == "new-refresh")),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WithUnverifiedAccount_ThrowsEmailNotVerifiedException()
+    {
+        const string password = "Test@123!";
+        var user = MakeActiveUser(password: password);
+        user.Status = UserStatus.PendingVerification;
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+
+        await Assert.ThrowsAsync<EmailNotVerifiedException>(
+            () => CreateSut().LoginAsync(new LoginRequest(user.Email, password)));
+    }
+
+    [Fact]
+    public async Task LoginAsync_WithDeactivatedAccount_ThrowsAccountInactiveException()
+    {
+        const string password = "Test@123!";
+        var user = MakeActiveUser(password: password);
+        user.Status = UserStatus.Inactive;
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+
+        await Assert.ThrowsAsync<AccountInactiveException>(
+            () => CreateSut().LoginAsync(new LoginRequest(user.Email, password)));
+    }
+
+    [Fact]
+    public async Task LoginAsync_WithSuspendedAccount_ThrowsAccountInactiveException()
+    {
+        const string password = "Test@123!";
+        var user = MakeActiveUser(password: password);
+        user.Status = UserStatus.Suspended;
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+
+        await Assert.ThrowsAsync<AccountInactiveException>(
+            () => CreateSut().LoginAsync(new LoginRequest(user.Email, password)));
+    }
+
+    [Fact]
+    public async Task LoginAsync_WithNonActiveAccountButWrongPassword_StillThrowsInvalidCredentials()
+    {
+        // Status is only checked AFTER the password — a wrong password must not leak account state.
+        var user = MakeActiveUser(password: "CorrectPass@1");
+        user.Status = UserStatus.Inactive;
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+
+        await Assert.ThrowsAsync<InvalidCredentialsException>(
+            () => CreateSut().LoginAsync(new LoginRequest(user.Email, "WrongPass@1")));
     }
 
     // -------------------------------------------------------------------------
@@ -241,11 +290,10 @@ public class AuthServiceTests
     [Fact]
     public async Task DeactivateUserByEmailAsync_WithExistingActiveUser_SetsStatusInactiveAndReturnsTrue()
     {
-        var tenantId = Guid.NewGuid();
         var user = MakeActiveUser();
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
 
-        var result = await CreateSut().DeactivateUserByEmailAsync(user.Email, tenantId);
+        var result = await CreateSut().DeactivateUserByEmailAsync(user.Email);
 
         Assert.True(result.Success);
         Assert.True(result.Data);
@@ -257,12 +305,11 @@ public class AuthServiceTests
     [Fact]
     public async Task DeactivateUserByEmailAsync_WithUnknownEmail_ThrowsUserNotFoundException()
     {
-        var tenantId = Guid.NewGuid();
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(It.IsAny<string>(), tenantId))
+        _userRepo.Setup(r => r.GetUserByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync((User?)null);
 
         await Assert.ThrowsAsync<UserNotFoundException>(
-            () => CreateSut().DeactivateUserByEmailAsync("ghost@test.com", tenantId));
+            () => CreateSut().DeactivateUserByEmailAsync("ghost@test.com"));
     }
 
     // -------------------------------------------------------------------------
@@ -277,7 +324,7 @@ public class AuthServiceTests
         var result = await CreateSut().ForgotPasswordAsync(new ForgetPasswordRequest { Email = "a@b.com" });
 
         Assert.True(result.Success);
-        _userRepo.Verify(r => r.GetUserByEmailAndTenantIdAsync(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never);
+        _userRepo.Verify(r => r.GetUserByEmailAsync(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -285,7 +332,7 @@ public class AuthServiceTests
     {
         var tenantId = Guid.NewGuid();
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(It.IsAny<string>(), tenantId))
+        _userRepo.Setup(r => r.GetUserByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync((User?)null);
 
         var result = await CreateSut().ForgotPasswordAsync(new ForgetPasswordRequest { Email = "ghost@test.com" });
@@ -300,7 +347,7 @@ public class AuthServiceTests
         var tenantId = Guid.NewGuid();
         var user = MakeActiveUser();
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
         _otpService.Setup(o => o.GenerateVerificationOtp()).Returns("5678");
 
         await CreateSut().ForgotPasswordAsync(new ForgetPasswordRequest { Email = user.Email });
@@ -326,7 +373,7 @@ public class AuthServiceTests
             OtpToken = "1234", OtpExpiry = DateTime.UtcNow.AddMinutes(10),
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
 
         var result = await CreateSut().ResetPasswordAsync(new ResetPasswordRequest
         {
@@ -356,7 +403,7 @@ public class AuthServiceTests
     {
         var tenantId = Guid.NewGuid();
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(It.IsAny<string>(), tenantId))
+        _userRepo.Setup(r => r.GetUserByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync((User?)null);
 
         await Assert.ThrowsAsync<InvalidOtpException>(
@@ -377,7 +424,7 @@ public class AuthServiceTests
             OtpToken = "correct", OtpExpiry = DateTime.UtcNow.AddMinutes(10),
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
 
         await Assert.ThrowsAsync<InvalidOtpException>(
             () => CreateSut().ResetPasswordAsync(new ResetPasswordRequest
@@ -397,7 +444,7 @@ public class AuthServiceTests
             OtpToken = "1234", OtpExpiry = DateTime.UtcNow.AddMinutes(-5), // expired
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
 
         await Assert.ThrowsAsync<OtpExpiredException>(
             () => CreateSut().ResetPasswordAsync(new ResetPasswordRequest
