@@ -371,9 +371,6 @@ namespace SchoolMaster.Migrations
                         .IsUnique()
                         .HasFilter("\"IsCurrent\" = true");
 
-                    b.HasIndex("TenantId", "AcademicYearId", "TermNumber")
-                        .IsUnique();
-
                     b.ToTable("Terms");
                 });
 

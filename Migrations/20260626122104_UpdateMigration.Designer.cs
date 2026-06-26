@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SchoolMaster.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using SchoolMaster.Infrastructure.Persistence;
 namespace SchoolMaster.Migrations
 {
     [DbContext(typeof(SchoolMasterContext))]
-    partial class SchoolMasterContextModelSnapshot : ModelSnapshot
+    [Migration("20260626122104_UpdateMigration")]
+    partial class UpdateMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -418,7 +421,7 @@ namespace SchoolMaster.Migrations
 
                     b.HasIndex("AcademicYearId");
 
-                    b.HasIndex("TenantId", "AcademicYearId", "TermNumber")
+                    b.HasIndex("TenantId", "AcademicYearId")
                         .IsUnique()
                         .HasFilter("\"IsCurrent\" = true");
 
