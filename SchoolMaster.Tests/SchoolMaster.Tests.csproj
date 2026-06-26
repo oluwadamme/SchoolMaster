@@ -23,6 +23,7 @@
     <!-- Pin EF Core to match the main project and silence the MSB3277 version conflict -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.5" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,9 +1,10 @@
 using SchoolMaster.Domain.Enums;
 
 namespace SchoolMaster.Domain.Authorization;
-
+// this static prevents you from being able to instantiate this class, thus providing a single source of truth
 public static class RolePermissions
 {
+    // this static stores the data below in memory.
     private static readonly Dictionary<UserRole, IReadOnlyList<Permission>> _map = new()
     {
         [UserRole.Admin] = new[]
@@ -28,7 +29,8 @@ public static class RolePermissions
             Permission.AttendanceViewClass,
             Permission.AttendanceViewReport,
             Permission.AttendanceViewAlerts,
-            Permission.UsersDeactivate
+            Permission.UsersDeactivate,
+            Permission.StaffManage
         },
 
         [UserRole.Teacher] = new[]

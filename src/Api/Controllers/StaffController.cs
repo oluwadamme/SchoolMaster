@@ -2,12 +2,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolMaster.Application.DTOs;
 using SchoolMaster.Application.Services.Interfaces;
+using SchoolMaster.Api.Authorization;
+using SchoolMaster.Domain.Enums;
 
 namespace SchoolMaster.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/staff")]
-[Authorize(Policy = "EmailVerified", Roles = "Admin")] // Only Verified Admins can access the staff management endpoints
+[HasPermission(Permission.IsEmailVerified)] // User must have verified their email
+[HasPermission(Permission.StaffManage)]     // Restricts access to Admins
 public class StaffController : ControllerBase
 {
     private readonly IStaffService _staffService;

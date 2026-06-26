@@ -8,6 +8,7 @@ using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Domain.Entities;
 using SchoolMaster.Infrastructure.Options;
 using SchoolMaster.Domain.Authorization;
+using SchoolMaster.Domain.Enums;
 
 namespace SchoolMaster.Infrastructure.Services;
 
@@ -34,8 +35,7 @@ public class JwtService : IJwtService
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.GivenName, user.FirstName),
             new Claim(ClaimTypes.Surname, user.LastName),
-            new Claim("tenant_id", user.TenantId.ToString()), // Important for multi-tenancy!
-            new Claim("email_verified", user.IsEmailVerified.ToString().ToLower()) // Policy check
+            new Claim("tenant_id", user.TenantId.ToString()) // Important for multi-tenancy!
         };
 
         foreach (var role in user.Roles)
@@ -45,8 +45,17 @@ public class JwtService : IJwtService
 
 
         var permissions = user.Roles
+            // Get all permissions for each role
             .SelectMany(role => RolePermissions.For(role))
+            // to filter lists for duplicates since a user can have multiple roles with overlapping permissions
             .Distinct();
+
+        // If the user's email is verified in the DB, add it as a permission claim
+        if (user.IsEmailVerified)
+        {
+            claims.Add(new Claim(PermissionClaimType.Type, Permission.IsEmailVerified.ToString()));
+        }
+
         foreach (var permission in permissions)
         {
             claims.Add(new Claim(PermissionClaimType.Type, permission.ToString()));

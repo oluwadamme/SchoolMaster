@@ -34,5 +34,8 @@ public enum Permission
     AttendanceViewReport,
     AttendanceViewAlerts,
 
-    UsersDeactivate
+    UsersDeactivate,
+
+    IsEmailVerified,
+    StaffManage
 }
