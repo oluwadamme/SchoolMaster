@@ -42,18 +42,13 @@ public class OnboardingService : IOnboardingService
 
     public async Task<BaseResponse<Guid>> CreateTenantWithAdminAsync(OnboardTenantRequest request)
     {
-        // 1. Check admin email uniqueness
-        if (await _userRepository.ExistsByEmailAsync(request.AdminEmail))
-        {
-            throw new AlreadyExistException("Admin email already exists.");
-        }
-
+        // 1. Subdomain must be globally unique (it is the tenant's address).
         if (await _tenantRepository.ExistsBySubdomainAsync(request.Subdomain))
         {
             throw new AlreadyExistException("Subdomain already exists.");
         }
 
-        // 2.Create Tenant
+        // 2. Create Tenant
         var tenant = new Tenant
         {
             Id = Guid.NewGuid(),
@@ -66,6 +61,14 @@ public class OnboardingService : IOnboardingService
             SchoolCode = request.SchoolCode,
             UpdatedAt = DateTime.UtcNow
         };
+
+        // Email is unique per tenant, not globally. A brand-new tenant has no users yet, so this
+        // correctly ALLOWS the same email to administer a different school while still guarding
+        // against duplicates within this tenant.
+        if (await _userRepository.ExistsByEmailInTenantAsync(request.AdminEmail, tenant.Id))
+        {
+            throw new AlreadyExistException("Admin email already exists in this school.");
+        }
 
         await _tenantRepository.AddTenantAsync(tenant);
 
@@ -116,7 +119,7 @@ public class OnboardingService : IOnboardingService
 
             throw new InvalidOtpException("Invalid OTP or Email address.");
         }
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
+        var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null || user.OtpToken != request.OtpToken || user.OtpExpiry < DateTime.UtcNow)
         {
             throw new InvalidOtpException("Invalid OTP or email address.");
@@ -140,7 +143,7 @@ public class OnboardingService : IOnboardingService
 
             return BaseResponse<bool>.SuccessResponse("Otp sent successfully", true);
         }
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
+        var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null)
         {
             Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
