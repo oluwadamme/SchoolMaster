@@ -178,6 +178,37 @@ try
                    }
                }
            };
+
+           // After signature/lifetime checks pass, re-validate the user server-side: the security stamp
+           // in the token must still match the stored one, and the account must still be active. This is
+           // what makes password reset and deactivation revoke already-issued access tokens immediately.
+           options.Events = new JwtBearerEvents
+           {
+               OnTokenValidated = async context =>
+               {
+                   var principal = context.Principal;
+                   var userIdValue = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                   var tenantValue = principal?.FindFirst("tenant_id")?.Value;
+                   var stampValue = principal?.FindFirst("security_stamp")?.Value;
+
+                   if (!Guid.TryParse(userIdValue, out var userId)
+                       || !Guid.TryParse(tenantValue, out var tenantId)
+                       || string.IsNullOrEmpty(stampValue))
+                   {
+                       context.Fail("Invalid token claims.");
+                       return;
+                   }
+
+                   var userRepository = context.HttpContext.RequestServices
+                       .GetRequiredService<IUserRepository>();
+                   var user = await userRepository.GetUserByIdAsync(userId, tenantId);
+
+                   if (user is null || user.SecurityStamp.ToString() != stampValue)
+                   {
+                       context.Fail("Session is no longer valid.");
+                   }
+               }
+           };
        });
     builder.Services.AddAuthorization(
         options =>

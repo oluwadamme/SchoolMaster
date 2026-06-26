@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using Microsoft.Extensions.Hosting;
 using SchoolMaster.Application.Services.Interfaces;
 
 namespace SchoolMaster.Application.Services;

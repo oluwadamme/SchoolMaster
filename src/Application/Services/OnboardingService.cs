@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Domain.Entities;
@@ -150,6 +150,7 @@ public class OnboardingService : IOnboardingService
             return BaseResponse<bool>.SuccessResponse("Email already verified", true);
         }
         var otp = _otpService.GenerateVerificationOtp();
+
         user.UpdateOtp(otp, DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes));
         await _userRepository.UpdateUserAsync(user);
 

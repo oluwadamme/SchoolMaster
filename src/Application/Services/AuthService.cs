@@ -55,6 +55,14 @@ public class AuthService : IAuthService
                 "Account temporarily locked due to too many failed login attempts. Please try again later.");
         }
 
+        // Account-level brute-force protection: once locked, reject even a correct password until the
+        // lockout window passes. This complements the per-IP rate limiter on the endpoint.
+        if (user.IsLockedOut())
+        {
+            throw new AccountLockedException(
+                "Account temporarily locked due to too many failed login attempts. Please try again later.");
+        }
+
         // 2. Check if the password is correct.
         // We use BCrypt to compare the typed password with the scrambled one (Hash) in the database.
         bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
@@ -229,7 +237,7 @@ public class AuthService : IAuthService
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null || user.OtpToken == null || user.OtpToken != request.Otp)
         {
-            Log.Warning("Password flow target not found in tenant {TenantId}.", tenantId);
+            Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
 
             // Count the wrong guess against the account and wipe the OTP once the budget is exhausted,
             // so a 6-digit code cannot be brute-forced within its lifetime.

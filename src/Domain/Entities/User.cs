@@ -49,6 +49,10 @@ public class User : IHasDomainEvents
     public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
     public void ClearDomainEvents() => _domainEvents.Clear();
 
+    // Lockout policy. Kept on the entity so the rule lives with the data it guards.
+    public const int MaxFailedLoginAttempts = 5;
+    public const int LockoutMinutes = 15;
+    public const int MaxOtpAttempts = 5;
 
     public void UpdateRefreshToken(string token, int daysToLive)
     {
@@ -155,6 +159,7 @@ public class User : IHasDomainEvents
         OtpExpiry = otpExpiry;
         OtpAttemptCount = 0;
         UpdatedAt = DateTime.UtcNow;
+        OtpAttemptCount = 0;
 
         _domainEvents.Add(new OtpVerificationEvent(TenantId, Email, FirstName, otpToken));
     }
