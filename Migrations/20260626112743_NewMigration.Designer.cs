@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SchoolMaster.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using SchoolMaster.Infrastructure.Persistence;
 namespace SchoolMaster.Migrations
 {
     [DbContext(typeof(SchoolMasterContext))]
-    partial class SchoolMasterContextModelSnapshot : ModelSnapshot
+    [Migration("20260626112743_NewMigration")]
+    partial class NewMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -81,57 +84,6 @@ namespace SchoolMaster.Migrations
                         .IsUnique();
 
                     b.ToTable("Classes");
-                });
-
-            modelBuilder.Entity("SchoolMaster.Domain.Entities.DailyAttendance", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ClassId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date");
-
-                    b.Property<Guid>("MarkedByTeacherId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("StudentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("TermId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClassId");
-
-                    b.HasIndex("StudentId");
-
-                    b.HasIndex("TermId");
-
-                    b.HasIndex("TenantId", "StudentId", "Date")
-                        .IsUnique();
-
-                    b.ToTable("DailyAttendances");
                 });
 
             modelBuilder.Entity("SchoolMaster.Domain.Entities.Period", b =>
@@ -246,9 +198,6 @@ namespace SchoolMaster.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ClassId")
                         .HasColumnType("uuid");
 
                     b.Property<DateOnly>("DateOfBirth")
@@ -418,7 +367,7 @@ namespace SchoolMaster.Migrations
 
                     b.HasIndex("AcademicYearId");
 
-                    b.HasIndex("TenantId", "AcademicYearId", "TermNumber")
+                    b.HasIndex("TenantId", "AcademicYearId")
                         .IsUnique()
                         .HasFilter("\"IsCurrent\" = true");
 
@@ -491,27 +440,6 @@ namespace SchoolMaster.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("SchoolMaster.Domain.Entities.DailyAttendance", b =>
-                {
-                    b.HasOne("SchoolMaster.Domain.Entities.Class", null)
-                        .WithMany()
-                        .HasForeignKey("ClassId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SchoolMaster.Domain.Entities.Student", null)
-                        .WithMany()
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SchoolMaster.Domain.Entities.Term", null)
-                        .WithMany()
-                        .HasForeignKey("TermId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("SchoolMaster.Domain.Entities.Period", b =>
