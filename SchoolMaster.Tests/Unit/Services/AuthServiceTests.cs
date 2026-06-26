@@ -95,11 +95,12 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_WithUnknownEmail_ThrowsUserNotFoundException()
+    public async Task LoginAsync_WithUnknownEmail_ThrowsInvalidCredentialsException()
     {
+        // Unknown email returns the same error as a wrong password, to prevent account enumeration.
         _userRepo.Setup(r => r.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
 
-        await Assert.ThrowsAsync<UserNotFoundException>(
+        await Assert.ThrowsAsync<InvalidCredentialsException>(
             () => CreateSut().LoginAsync(new LoginRequest("unknown@test.com", "any")));
     }
 

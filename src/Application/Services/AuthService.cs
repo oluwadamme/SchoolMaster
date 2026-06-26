@@ -40,10 +40,11 @@ public class AuthService : IAuthService
         // 1. Find the user by email. Tenant scoping is applied by the global query filter.
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
 
-        // If no user is found with that email, it means the email is wrong.
+        // Unknown email and wrong password return the same error (and status) so an attacker cannot use
+        // login responses to discover which emails are registered.
         if (user == null)
         {
-            throw new UserNotFoundException("Invalid email or password.");
+            throw new InvalidCredentialsException("Invalid email or password.");
         }
 
         // Account-level brute-force protection: once locked, reject even a correct password until the
@@ -191,14 +192,14 @@ public class AuthService : IAuthService
         var tenantId = _currentTenant.Id;
         if (tenantId == Guid.Empty)
         {
-            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Password flow invoked with no resolved tenant.");
 
             return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
         }
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null)
         {
-            Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Password flow target not found in tenant {TenantId}.", tenantId);
             return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
         }
         var otp = _otpService.GenerateVerificationOtp();
@@ -221,14 +222,14 @@ public class AuthService : IAuthService
         var tenantId = _currentTenant.Id;
         if (tenantId == Guid.Empty)
         {
-            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Password flow invoked with no resolved tenant.");
 
             throw new InvalidOtpException("Invalid OTP or Email address.");
         }
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null || user.OtpToken == null || user.OtpToken != request.Otp)
         {
-            Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Password flow target not found in tenant {TenantId}.", tenantId);
 
             // Count the wrong guess against the account and wipe the OTP once the budget is exhausted,
             // so a 6-digit code cannot be brute-forced within its lifetime.

@@ -114,12 +114,13 @@ public class AuthControllerTests : IClassFixture<SchoolMasterWebApplicationFacto
     }
 
     [Fact]
-    public async Task Login_WithUnknownEmail_Returns404()
+    public async Task Login_WithUnknownEmail_Returns401()
     {
+        // Unknown email returns the same 401 as a wrong password (anti-enumeration), not a 404.
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login",
             new { email = "nobody@test.com", password = "Test@123!" });
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
@@ -175,12 +176,11 @@ public class AuthControllerTests : IClassFixture<SchoolMasterWebApplicationFacto
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login",
             new { password = "Test@123!" }); // email intentionally omitted
 
-        // LoginRequest is a record with no FluentValidation; null email causes a
-        // UserNotFoundException which the ExceptionMiddleware maps to 404, unless
-        // model binding itself fails with 400. This documents the actual behaviour.
+        // LoginRequest is a record with no FluentValidation; a null email is treated as bad
+        // credentials (401) unless model binding itself fails first with 400. Either is acceptable.
         Assert.True(
             response.StatusCode == HttpStatusCode.BadRequest ||
-            response.StatusCode == HttpStatusCode.NotFound);
+            response.StatusCode == HttpStatusCode.Unauthorized);
     }
 
     // -------------------------------------------------------------------------

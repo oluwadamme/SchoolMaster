@@ -115,7 +115,7 @@ public class OnboardingService : IOnboardingService
         var tenantId = _currentTenant.Id;
         if (tenantId == Guid.Empty)
         {
-            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Verification flow invoked with no resolved tenant.");
 
             throw new InvalidOtpException("Invalid OTP or Email address.");
         }
@@ -145,19 +145,19 @@ public class OnboardingService : IOnboardingService
         var tenantId = _currentTenant.Id;
         if (tenantId == Guid.Empty)
         {
-            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Verification flow invoked with no resolved tenant.");
 
             return BaseResponse<bool>.SuccessResponse("Otp sent successfully", true);
         }
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null)
         {
-            Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Resend-OTP target not found in tenant {TenantId}.", tenantId);
             return BaseResponse<bool>.SuccessResponse("Otp sent successfully", true);
         }
         if (user.IsEmailVerified)
         {
-            Log.Error("Email already verified for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Resend-OTP requested for an already-verified account in tenant {TenantId}.", tenantId);
             return BaseResponse<bool>.SuccessResponse("Email already verified", true);
         }
         var otp = _otpService.GenerateVerificationOtp();

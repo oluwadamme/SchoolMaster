@@ -108,7 +108,7 @@ try
     // is not yet visible at this point in startup (and tests always supply a valid 32+ char key).
     if (!builder.Environment.IsEnvironment("Testing"))
     {
-        var jwtKey = builder.Configuration["Jwt:Key"];
+        var jwtKey = builder.Configuration.GetSection("Jwt")["Key"];
         if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
         {
             throw new InvalidOperationException(
@@ -270,11 +270,29 @@ try
     });
     });
 
+    // CORS: only the origins listed under "Cors:AllowedOrigins" may call the API from a browser.
+    // With none configured the policy allows no cross-origin access at all (safe default for an API
+    // that has no browser SPA wired up yet).
+    var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?? Array.Empty<string>();
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("DefaultCors", policy =>
+        {
+            if (corsOrigins.Length > 0)
+            {
+                policy.WithOrigins(corsOrigins)
+                      .AllowAnyHeader()
+                      .AllowAnyMethod()
+                      .AllowCredentials();
+            }
+        });
+    });
+
     var app = builder.Build();
 
     if (!isTesting)
     {
-        app.UseHangfireDashboard();
         using (var scope = app.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<SchoolMasterContext>();
@@ -285,13 +303,39 @@ try
         }
     }
 
+    // The Hangfire dashboard exposes job payloads (which include guardian emails) and lets jobs be
+    // triggered. It has no admin auth of its own here, so mount it only in Development. Revisit with a
+    // proper IDashboardAuthorizationFilter before ever exposing it in production.
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseHangfireDashboard();
+    }
+
     // 1. First Aid Station (Catch all errors)
     app.UseMiddleware<ExceptionMiddleware>();
     // 2. Check-in Desk (Identify the School)
     app.UseMiddleware<TenantResolverMiddleware>();
     // Unit of Work now commits via UnitOfWorkFilter (an MVC action filter), not middleware,
     // so a failed commit can still be turned into the correct error response.
+
+    // HSTS only outside Development so we never pin localhost to HTTPS in browsers.
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHsts();
+    }
     app.UseHttpsRedirection();
+
+    // Baseline security response headers on every response.
+    app.Use(async (context, next) =>
+    {
+        var headers = context.Response.Headers;
+        headers["X-Content-Type-Options"] = "nosniff";   // don't MIME-sniff responses
+        headers["X-Frame-Options"] = "DENY";              // disallow framing (clickjacking)
+        headers["Referrer-Policy"] = "no-referrer";       // don't leak URLs to other origins
+        await next();
+    });
+
+    app.UseCors("DefaultCors");
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()
 
     app.UseAuthentication();   // ← BEFORE authorization
