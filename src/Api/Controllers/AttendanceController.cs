@@ -28,6 +28,15 @@ public class AttendanceController(IAttendanceService attendanceService) : Contro
         return Ok(result);
     }
 
+    [HasPermission(Permission.AttendanceMark)]
+    [HttpPost]
+    public async Task<ActionResult<BaseResponse<MarkAttendanceResponse>>> MarkAttendancev2(
+        [FromBody] MarkAttendanceRequest request)
+    {
+        var result = await attendanceService.MarkAttendanceAsync(request);
+        return Ok(result);
+    }
+
     /// <summary>Get class attendance for a specific date</summary>
     /// <remarks>
     /// Returns all attendance records for the given class on the given date.
