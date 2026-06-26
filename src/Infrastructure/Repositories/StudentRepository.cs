@@ -37,9 +37,30 @@ public class StudentRepository : IStudentRepository
             .FirstOrDefaultAsync();
     }
 
+    public async Task<List<Student>> GetStudentsByClassIdAsync(Guid classId) =>
+        await _context.Students
+            .Where(s => s.ClassId == classId)
+            .ToListAsync();
+
+    // Projection avoids loading full entities when only IDs are needed for validation
+    public async Task<HashSet<Guid>> GetStudentIdsByClassIdAsync(Guid classId) =>
+        await _context.Students
+            .Where(s => s.ClassId == classId)
+            .Select(s => s.Id)
+            .ToHashSetAsync();
+
+    public async Task<bool> ExistsAsync(Guid studentId) =>
+        await _context.Students.AnyAsync(s => s.Id == studentId);
+
+    // IgnoreQueryFilters: Hangfire jobs have no HttpContext, so ICurrentTenant returns
+    // Guid.Empty. Explicit tenantId param provides the isolation guarantee instead.
+    public async Task<Student?> GetStudentByIdIgnoringFiltersAsync(Guid studentId, Guid tenantId) =>
+        await _context.Students
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.Id == studentId && s.TenantId == tenantId);
+
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();
     }
-
 }
