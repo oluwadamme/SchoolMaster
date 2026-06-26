@@ -52,7 +52,6 @@ artifacts/
 *.sln.iml
 
 bin/
-Migrations/
 
 # VS Code
 .vscode/*
