@@ -8,12 +8,13 @@ using FluentValidation.AspNetCore;
 using SchoolMaster.Infrastructure.Options;
 using SchoolMaster.Application.Services;
 using SchoolMaster.Infrastructure.Services;
-using SchoolMaster.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Security.Claims;
 using Hangfire;
 using Hangfire.PostgreSql;
 using SchoolMaster.Infrastructure.Persistence;
@@ -101,6 +102,20 @@ try
     builder.Services.Configure<EmailVerificationOptions>(builder.Configuration.GetSection("EmailVerification"));
     builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("EmailSettings"));
 
+    // Fail fast on a missing or too-short signing key. HmacSha256 needs at least 256 bits (32 bytes);
+    // a short key produces weak, forgeable signatures. This guard cannot measure entropy, only length.
+    // Skipped under "Testing": the test host injects its key later via ConfigureAppConfiguration, so it
+    // is not yet visible at this point in startup (and tests always supply a valid 32+ char key).
+    if (!builder.Environment.IsEnvironment("Testing"))
+    {
+        var jwtKey = builder.Configuration["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+        {
+            throw new InvalidOperationException(
+                "Jwt:Key is missing or shorter than 32 bytes. Configure a strong, random 256-bit (or longer) key.");
+        }
+    }
+
     builder.Services.AddAuthentication("Bearer").AddJwtBearer(options =>
        {
            var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -113,6 +128,37 @@ try
                ValidIssuer = jwtSettings["Issuer"],
                ValidAudience = jwtSettings["Audience"],
                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
+           };
+
+           // After signature/lifetime checks pass, re-validate the user server-side: the security stamp
+           // in the token must still match the stored one, and the account must still be active. This is
+           // what makes password reset and deactivation revoke already-issued access tokens immediately.
+           options.Events = new JwtBearerEvents
+           {
+               OnTokenValidated = async context =>
+               {
+                   var principal = context.Principal;
+                   var userIdValue = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                   var tenantValue = principal?.FindFirst("tenant_id")?.Value;
+                   var stampValue = principal?.FindFirst("security_stamp")?.Value;
+
+                   if (!Guid.TryParse(userIdValue, out var userId)
+                       || !Guid.TryParse(tenantValue, out var tenantId)
+                       || string.IsNullOrEmpty(stampValue))
+                   {
+                       context.Fail("Invalid token claims.");
+                       return;
+                   }
+
+                   var userRepository = context.HttpContext.RequestServices
+                       .GetRequiredService<IUserRepository>();
+                   var user = await userRepository.GetUserByIdAsync(userId, tenantId);
+
+                   if (user is null || user.SecurityStamp.ToString() != stampValue)
+                   {
+                       context.Fail("Session is no longer valid.");
+                   }
+               }
            };
        });
     builder.Services.AddAuthorization(
@@ -150,16 +196,22 @@ try
         {
             // If they get blocked, send back a 429 Too Many Requests
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            // Define a strict policy named "AuthLimit"
-            options.AddFixedWindowLimiter("AuthLimit", config =>
+            // "AuthLimit" is partitioned per client IP so one abusive client cannot exhaust a single
+            // shared bucket and lock everyone out (and so the limit actually throttles a brute-forcer).
+            // NOTE: behind a reverse proxy, enable ForwardedHeaders so RemoteIpAddress is the real client.
+            options.AddPolicy("AuthLimit", httpContext =>
             {
-                // Only allow 5 requests per IP address...
-                config.PermitLimit = 5;
-                // ...every 1 minute.
-                config.Window = TimeSpan.FromMinutes(1);
-                config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                // Don't queue extra requests, just block them instantly.
-                config.QueueLimit = 0;
+                var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ =>
+                    new FixedWindowRateLimiterOptions
+                    {
+                        // Only allow 5 requests per IP address every 1 minute.
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        // Don't queue extra requests, just block them instantly.
+                        QueueLimit = 0
+                    });
             });
         });
 

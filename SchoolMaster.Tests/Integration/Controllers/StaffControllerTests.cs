@@ -57,6 +57,7 @@ public class StaffControllerTests : IClassFixture<SchoolMasterWebApplicationFact
         string token;
         using (var scope = _factory.Services.CreateScope())
         {
+            var context = scope.ServiceProvider.GetRequiredService<SchoolMasterContext>();
             var jwtService = scope.ServiceProvider.GetRequiredService<IJwtService>();
             var adminUser = new User
             {
@@ -67,8 +68,13 @@ public class StaffControllerTests : IClassFixture<SchoolMasterWebApplicationFact
                 Email = "susan@gha.edu",
                 PasswordHash = "TestPasswordHash",
                 Roles = new List<UserRole> { UserRole.Admin },
+                Status = UserStatus.Active,   // must be Active — OnTokenValidated rejects non-active users
                 IsEmailVerified = true // Critical for our [HasPermission] check!
             };
+            // Persist the admin so the token's security stamp can be validated against the stored user
+            // on every request (session-revocation check added in OnTokenValidated).
+            context.Users.Add(adminUser);
+            await context.SaveChangesAsync();
             token = jwtService.GenerateAccessToken(adminUser);
         }
 

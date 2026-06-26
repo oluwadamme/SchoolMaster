@@ -452,4 +452,105 @@ public class AuthServiceTests
                 Email = user.Email, Password = "P@ss1A", Otp = "1234"
             }));
     }
+
+    // -------------------------------------------------------------------------
+    // Login lockout (account-level brute-force protection)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task LoginAsync_AfterMaxWrongPasswords_LocksAccountEvenForCorrectPassword()
+    {
+        const string password = "Correct@1";
+        var user = MakeActiveUser(password: password);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+        var sut = CreateSut();
+
+        for (var i = 0; i < User.MaxFailedLoginAttempts; i++)
+        {
+            await Assert.ThrowsAsync<InvalidCredentialsException>(
+                () => sut.LoginAsync(new LoginRequest(user.Email, "Wrong@1")));
+        }
+
+        // Account is now locked, so even the correct password is rejected with a lockout error.
+        await Assert.ThrowsAsync<AccountLockedException>(
+            () => sut.LoginAsync(new LoginRequest(user.Email, password)));
+    }
+
+    [Fact]
+    public async Task LoginAsync_SuccessfulLogin_ResetsFailedAttempts()
+    {
+        const string password = "Correct@1";
+        var user = MakeActiveUser(password: password);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+        var sut = CreateSut();
+
+        // A few failures, then a success, then more failures must not trip the lockout early.
+        await Assert.ThrowsAsync<InvalidCredentialsException>(
+            () => sut.LoginAsync(new LoginRequest(user.Email, "Wrong@1")));
+        await sut.LoginAsync(new LoginRequest(user.Email, password));
+
+        Assert.Equal(0, user.FailedLoginAttempts);
+        Assert.False(user.IsLockedOut());
+    }
+
+    // -------------------------------------------------------------------------
+    // OTP lockout + session revocation on password reset
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ResetPasswordAsync_OnSuccess_RotatesSecurityStampAndClearsRefreshToken()
+    {
+        var tenantId = Guid.NewGuid();
+        var user = new User
+        {
+            Id = Guid.NewGuid(), TenantId = tenantId, FirstName = "A", LastName = "B",
+            Email = "a@test.com", PasswordHash = "old", Roles = [UserRole.Admin],
+            OtpToken = "123456", OtpExpiry = DateTime.UtcNow.AddMinutes(10),
+        };
+        user.UpdateRefreshToken("active-refresh", 7);
+        var originalStamp = user.SecurityStamp;
+
+        _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+
+        await CreateSut().ResetPasswordAsync(new ResetPasswordRequest
+        {
+            Email = user.Email, Password = "NewPass@1", Otp = "123456"
+        });
+
+        Assert.Null(user.RefreshToken);
+        Assert.NotEqual(originalStamp, user.SecurityStamp);
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_AfterMaxWrongOtps_InvalidatesOtp()
+    {
+        var tenantId = Guid.NewGuid();
+        var user = new User
+        {
+            Id = Guid.NewGuid(), TenantId = tenantId, FirstName = "A", LastName = "B",
+            Email = "a@test.com", PasswordHash = "old", Roles = [UserRole.Admin],
+            OtpToken = "123456", OtpExpiry = DateTime.UtcNow.AddMinutes(10),
+        };
+        _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
+        var sut = CreateSut();
+
+        for (var i = 0; i < User.MaxOtpAttempts; i++)
+        {
+            await Assert.ThrowsAsync<InvalidOtpException>(
+                () => sut.ResetPasswordAsync(new ResetPasswordRequest
+                {
+                    Email = user.Email, Password = "NewPass@1", Otp = "000000"
+                }));
+        }
+
+        // OTP is wiped after the attempt budget is exhausted, so even the right code no longer works.
+        Assert.Null(user.OtpToken);
+        await Assert.ThrowsAsync<InvalidOtpException>(
+            () => sut.ResetPasswordAsync(new ResetPasswordRequest
+            {
+                Email = user.Email, Password = "NewPass@1", Otp = "123456"
+            }));
+    }
 }

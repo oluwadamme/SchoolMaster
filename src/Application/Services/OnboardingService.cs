@@ -120,16 +120,22 @@ public class OnboardingService : IOnboardingService
             throw new InvalidOtpException("Invalid OTP or Email address.");
         }
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
-        if (user == null || user.OtpToken != request.OtpToken || user.OtpExpiry < DateTime.UtcNow)
+        if (user == null || user.OtpToken == null || user.OtpToken != request.OtpToken || user.OtpExpiry < DateTime.UtcNow)
         {
+            // Count only genuine wrong guesses against a live OTP (not missing or expired) toward the
+            // lockout, then wipe the OTP once the attempt budget is exhausted.
+            if (user is { OtpToken: not null } && user.OtpExpiry >= DateTime.UtcNow && user.OtpToken != request.OtpToken)
+            {
+                user.RegisterFailedOtpAttempt();
+                await _userRepository.UpdateUserAsync(user);
+            }
+
             throw new InvalidOtpException("Invalid OTP or email address.");
         }
         user.IsEmailVerified = true;
         user.Status = UserStatus.Active;
-        user.OtpToken = null;
-        user.OtpExpiry = null;
+        user.ClearOtp();
         user.UpdatedAt = DateTime.UtcNow;
-        user.Status = UserStatus.Active;
         await _userRepository.UpdateUserAsync(user);
         return BaseResponse<bool>.SuccessResponse("Email verified successfully", true);
     }
@@ -160,6 +166,7 @@ public class OnboardingService : IOnboardingService
 
         user.OtpToken = otp;
         user.OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes);
+        user.OtpAttemptCount = 0; // fresh OTP starts with a clean attempt budget
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateUserAsync(user);
 

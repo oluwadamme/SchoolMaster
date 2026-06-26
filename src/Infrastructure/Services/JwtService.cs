@@ -25,7 +25,9 @@ public class JwtService : IJwtService
     {
         // 1. Prepare the secret key.
         // This key is like a secret stamp only our server has.
-        var key = Encoding.ASCII.GetBytes(_jwtOptions.Key);
+        // UTF8 must match the validation side (Program.cs / GetPrincipalFromExpiredToken). ASCII here
+        // would silently corrupt any non-ASCII key byte and break signature validation.
+        var key = Encoding.UTF8.GetBytes(_jwtOptions.Key);
 
         // 2. Create the "claims" (the information on the ID badge).
         // This includes the user's ID, email, first name, last name, and role.
@@ -35,7 +37,10 @@ public class JwtService : IJwtService
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.GivenName, user.FirstName),
             new Claim(ClaimTypes.Surname, user.LastName),
-            new Claim("tenant_id", user.TenantId.ToString()) // Important for multi-tenancy!
+            new Claim("tenant_id", user.TenantId.ToString()), // Important for multi-tenancy!
+            // Bound to User.SecurityStamp and re-checked on every authenticated request. Rotating the
+            // stamp (password reset, deactivation) invalidates this token immediately.
+            new Claim("security_stamp", user.SecurityStamp.ToString())
         };
 
         foreach (var role in user.Roles)

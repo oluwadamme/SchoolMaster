@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SchoolMaster.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using SchoolMaster.Infrastructure.Persistence;
 namespace SchoolMaster.Migrations
 {
     [DbContext(typeof(SchoolMasterContext))]
-    partial class SchoolMasterContextModelSnapshot : ModelSnapshot
+    [Migration("20260626141007_AddUserSecurityColumns")]
+    partial class AddUserSecurityColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
