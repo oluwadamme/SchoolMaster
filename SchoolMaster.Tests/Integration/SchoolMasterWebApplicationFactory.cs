@@ -19,17 +19,22 @@ namespace SchoolMaster.Tests.Integration;
 /// One PostgreSQL container is started per test class via IClassFixture.
 /// Migrations are applied once when the factory initialises.
 /// </summary>
+/// : WebApplicationFactory<Program>: This tells the computer: 
+/// "Take the real school app (the Program) and make a temporary copy for me in memory to play with."
+/// , IAsyncLifetime: This is a set of rules. It tells the computer how to Start the laboratory
+///  and how to Clean it up when we are finished.
 public class SchoolMasterWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string FixedOtp = "0000";
 
     // The server uses JsonStringEnumConverter, so the test client must too.
+    // converts your c# objects to JSON when sending requests, and converts JSON back to C# objects when reading responses. The JsonStringEnumConverter makes sure that enum values are sent as their names (e.g., "Admin") instead of their numeric values (e.g., 1).
     public static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter() },
     };
-
+    // building fake database
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
         .WithImage("postgres:16-alpine")
         .Build();
@@ -41,13 +46,14 @@ public class SchoolMasterWebApplicationFactory : WebApplicationFactory<Program>,
     public async Task InitializeAsync()
     {
         await _postgres.StartAsync();
-
-        // EnsureCreated builds the schema directly from the current model.
+        // EnsureCreated builds the schema directly from the current model instead of using migrations
         // This avoids EF Core 10's PendingModelChangesWarning, which fires when
         // entity changes exist that have not yet been captured in a migration.
-        // Testcontainers always starts a blank database, so there is nothing to
-        // migrate incrementally — we just need the schema to exist.
+        // Testcontainers always starts a blank database for every test class, so there is nothing to
+        // migrate incrementally — we just need the schema/c# model to exist.
+        // creates "private tool box" to isolate and use a tool then destroy it afterwards. because the database tool is too heavy to just stay in memory, so we create a scope to use it and then destroy it after we are done.
         using var scope = Services.CreateScope();
+        // db tool to build the tables in the database 
         var db = scope.ServiceProvider.GetRequiredService<SchoolMasterContext>();
         await db.Database.EnsureCreatedAsync();
     }
@@ -91,12 +97,14 @@ public class SchoolMasterWebApplicationFactory : WebApplicationFactory<Program>,
             // Program.cs) for one that points at the Testcontainers PostgreSQL instance.
             var dsDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(NpgsqlDataSource));
             if (dsDescriptor != null) services.Remove(dsDescriptor);
-
+            
             var testDsBuilder = new NpgsqlDataSourceBuilder(_postgres.GetConnectionString());
             testDsBuilder.ConfigureJsonOptions(new JsonSerializerOptions
             {
                 Converters = { new JsonStringEnumConverter() }
             });
+            // machine that builds the physical connection between your API and your database(it knows the address of the fake database and is fixed to the database)
+            // AddSingleton means make only one instance of this builder for the whole test class, and share it across all tests. This is important because each test needs to talk to the same database instance.
             services.AddSingleton(testDsBuilder.Build());
 
             // Replace EmailService (would try a real SMTP connection) with a no-op mock.
@@ -111,8 +119,8 @@ public class SchoolMasterWebApplicationFactory : WebApplicationFactory<Program>,
             services.AddScoped<IOtpService>(_ => new FixedOtpService(FixedOtp));
 
             // Hangfire is disabled in the "Testing" environment (see Program.cs), so
-            // IBackgroundJobClient is not registered. Register a mock so AuthService
-            // and OnboardingService can be constructed by the DI container.
+            // IBackgroundJobClient is not registered. Register a mock of IBackgroundJobClient so AuthService
+            // and OnboardingService can be constructed by the DI container. because they depend on IBackgroundJobClient.
             services.AddSingleton<IBackgroundJobClient>(_ => Mock.Of<IBackgroundJobClient>());
         });
     }

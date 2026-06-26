@@ -37,6 +37,7 @@ public class AuthControllerTests : IClassFixture<SchoolMasterWebApplicationFacto
             AdminLastName = "Admin",
             AdminEmail = $"authadmin-{u}@test.com",
             AdminPassword = "Test@123!",
+            SchoolCode = "SCH",
         };
     }
 
@@ -60,7 +61,6 @@ public class AuthControllerTests : IClassFixture<SchoolMasterWebApplicationFacto
             {
                 Email = req.AdminEmail,
                 OtpToken = SchoolMasterWebApplicationFactory.FixedOtp,
-                TenantId = tenantId
             })
         };
         verifyMsg.Headers.Add("X-Tenant-Subdomain", req.Subdomain);

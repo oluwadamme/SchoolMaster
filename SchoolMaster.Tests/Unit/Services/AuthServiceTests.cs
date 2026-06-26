@@ -241,11 +241,10 @@ public class AuthServiceTests
     [Fact]
     public async Task DeactivateUserByEmailAsync_WithExistingActiveUser_SetsStatusInactiveAndReturnsTrue()
     {
-        var tenantId = Guid.NewGuid();
         var user = MakeActiveUser();
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, _currentTenant.Object.Id)).ReturnsAsync(user);
 
-        var result = await CreateSut().DeactivateUserByEmailAsync(user.Email, tenantId);
+        var result = await CreateSut().DeactivateUserByEmailAsync(user.Email);
 
         Assert.True(result.Success);
         Assert.True(result.Data);
@@ -262,7 +261,7 @@ public class AuthServiceTests
             .ReturnsAsync((User?)null);
 
         await Assert.ThrowsAsync<UserNotFoundException>(
-            () => CreateSut().DeactivateUserByEmailAsync("ghost@test.com", tenantId));
+            () => CreateSut().DeactivateUserByEmailAsync("ghost@test.com"));
     }
 
     // -------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 using SchoolMaster.Application.DTOs;
-using SchoolMaster.Application.Repositories;
 using SchoolMaster.Application.Services.Interfaces;
+using SchoolMaster.Application.Repositories;
 using SchoolMaster.Domain.CustomException;
 using Serilog;
 using Hangfire;
@@ -18,7 +18,13 @@ public class AuthService : IAuthService
     private readonly ICurrentTenant _currentTenant;
     private readonly IOtpService _otpService;
 
-    public AuthService(IUserRepository userRepository, IJwtService jwtService, IBackgroundJobClient backgroundJobClient, IOptions<EmailVerificationOptions> emailOptions, ICurrentTenant currentTenant, IOtpService otpService)
+    public AuthService(
+        IUserRepository userRepository, 
+        IJwtService jwtService, 
+        IBackgroundJobClient backgroundJobClient, 
+        IOptions<EmailVerificationOptions> emailOptions, 
+        ICurrentTenant currentTenant, 
+        IOtpService otpService)
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
@@ -30,9 +36,13 @@ public class AuthService : IAuthService
 
     public async Task<BaseResponse<AuthResponse>> LoginAsync(LoginRequest request)
     {
-        // 1. Find the user in the database using their email.
-        // The IUserRepository tool helps us do this.
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, _currentTenant.Id);
+        // 1. Retrieve the TenantId found by the Middleware from the X-Tenant-Subdomain header
+        // so it knows the school to check for the login attempt
+        // if two schools have the same email for a user, this will make sure the user can only log in to the correct school.
+        var tenantId = _currentTenant.Id;
+
+        // 2. Find the user only within THAT specific school
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
 
         // If no user is found with that email, it means the email is wrong.
         if (user == null)
@@ -132,10 +142,11 @@ public class AuthService : IAuthService
     }
 
   
-    public async Task<BaseResponse<bool>> DeactivateUserByEmailAsync(string email, Guid tenantId)
+    public async Task<BaseResponse<bool>> DeactivateUserByEmailAsync(string email)
     {
         // 1. Find the user by Email and TenantId (Safety first!)
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(email, tenantId);
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(email, _currentTenant.Id);
+        // var tenantId);
 
         // If we can't find them, they might be in another school or already inactive
         if (user == null)
@@ -182,16 +193,9 @@ public class AuthService : IAuthService
 
         return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
     }
-
     public async Task<BaseResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request)
     {
         var tenantId = _currentTenant.Id;
-        if (tenantId == Guid.Empty)
-        {
-            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
-
-            throw new InvalidOtpException("Invalid OTP or Email address.");
-        }
         var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, _currentTenant.Id);
         if (user == null || user.OtpToken != request.Otp)
         {

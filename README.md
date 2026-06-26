@@ -321,3 +321,4 @@ docker compose up --build -d api
 - [ ] CSV export for all attendance reports
 - [ ] Soft delete — deactivate students/staff instead of hard delete
 - [x] API versioning — /api/v1/ prefix enforced from day one
+- [ ] Bulk Enrollment of Students/Staff

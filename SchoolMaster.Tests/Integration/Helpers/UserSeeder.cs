@@ -6,13 +6,13 @@ using SchoolMaster.Infrastructure.Persistence;
 namespace SchoolMaster.Tests.Integration.Helpers;
 
 /// <summary>
-/// Seeds users with specific roles directly into the database.
-/// Used when no API endpoint exists yet to create that user type (e.g. Teacher, Student).
+/// creates users with specific roles directly into the database.
+/// also to keep the code clean and simple
 /// </summary>
 public static class UserSeeder
 {
     /// <summary>
-    /// Creates a tenant and a user with the given roles.
+    /// Creates a tenant and a user with the given roles .
     /// Returns the subdomain, email, and plain-text password needed for login.
     /// </summary>
     public static async Task<(string Subdomain, string Email, string Password)> SeedAsync(

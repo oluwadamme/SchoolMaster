@@ -1,5 +1,6 @@
 namespace SchoolMaster.Domain.Enums;
 
+// a list of specific actions a user can perform in the system.
 public enum Permission
 {
     // Students
@@ -33,5 +34,8 @@ public enum Permission
     AttendanceViewReport,
     AttendanceViewAlerts,
 
-    UsersDeactivate
+    UsersDeactivate,
+
+    IsEmailVerified,
+    StaffManage
 }

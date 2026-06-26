@@ -63,6 +63,7 @@ public class OnboardingService : IOnboardingService
             Status = TenantStatus.Active,
             Plan = TenantPlan.Basic,
             CreatedAt = DateTime.UtcNow,
+            SchoolCode = request.SchoolCode,
             UpdatedAt = DateTime.UtcNow
         };
 
@@ -83,6 +84,7 @@ public class OnboardingService : IOnboardingService
             Email = request.AdminEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.AdminPassword),
             Roles = new List<UserRole> { UserRole.Admin },
+            Status = UserStatus.PendingVerification,
             IsEmailVerified = false,
             OtpToken = otp,
             OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes),
@@ -124,6 +126,7 @@ public class OnboardingService : IOnboardingService
         user.OtpToken = null;
         user.OtpExpiry = null;
         user.UpdatedAt = DateTime.UtcNow;
+        user.Status = UserStatus.Active;
         await _userRepository.UpdateUserAsync(user);
         return BaseResponse<bool>.SuccessResponse("Email verified successfully", true);
     }

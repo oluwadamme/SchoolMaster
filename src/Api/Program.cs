@@ -7,6 +7,7 @@ using FluentValidation.AspNetCore;
 using SchoolMaster.Infrastructure.Options;
 using SchoolMaster.Application.Services;
 using SchoolMaster.Infrastructure.Services;
+using SchoolMaster.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -37,7 +38,7 @@ try
     var builder = WebApplication.CreateBuilder(args);
     builder.Host.UseSerilog(); // Tell .NET to use Serilog instead of the default logger
 
-
+    // where you register the services you will use
     // Add services to the container.
     builder.Services.AddControllers()
         .AddJsonOptions(options =>
@@ -52,11 +53,15 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
+    builder.Services.AddScoped<IStaffService, StaffService>(); // Register the StaffService
+    builder.Services.AddScoped<IStudentService, StudentService>();
     builder.Services.AddScoped<ITenantRepository, TenantRepository>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
+    builder.Services.AddScoped<IStaffRepository, StaffRepository>(); // Register the StaffRepository
+    builder.Services.AddScoped<IStudentRepository, StudentRepository>(); // Register the StudentRepository
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
-    builder.Services.AddScoped<IJwtService, JwtService>();
+    builder.Services.AddScoped<IJwtService, JwtService>(); // This line was already there, just showing context
     builder.Services.AddScoped<IOtpService, OtpService>();
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
     builder.Services.AddScoped<IAcademicService, AcademicService>();
@@ -197,8 +202,11 @@ try
         }
     }
 
+    // 1. First Aid Station (Catch all errors)
     app.UseMiddleware<ExceptionMiddleware>();
+    // 2. Check-in Desk (Identify the School)
     app.UseMiddleware<TenantResolverMiddleware>();
+
     app.UseMiddleware<UnitOfWorkMiddleware>();
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()

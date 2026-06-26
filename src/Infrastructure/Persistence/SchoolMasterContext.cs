@@ -27,6 +27,15 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
 
         modelBuilder.Entity<Tenant>().HasIndex(t => t.Subdomain).IsUnique();
 
+        // Ensure StudentNumber is unique within each school (Tenant)
+        modelBuilder.Entity<Student>()
+            .HasIndex(s => new { s.TenantId, s.StudentNumber })
+            .IsUnique();
+
+        // Ensure StaffNumber is unique within each school (Tenant)
+        modelBuilder.Entity<Staff>()
+            .HasIndex(s => new { s.TenantId, s.StaffNumber })
+            .IsUnique();
         modelBuilder.Entity<Class>()
             .HasIndex(c => new { c.TenantId, c.Name }).IsUnique();
 

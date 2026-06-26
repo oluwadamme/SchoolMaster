@@ -1,3 +1,5 @@
+namespace SchoolMaster.Infrastructure.Repositories;
+
 using System;
 using Microsoft.EntityFrameworkCore;
 using SchoolMaster.Application.Repositories;
@@ -27,4 +29,17 @@ public class TenantRepository : ITenantRepository
     {
         return await _context.Tenants.FirstOrDefaultAsync(x => x.Subdomain == subdomain);
     }
+
+    public async Task<Tenant?> GetByIdAsync(Guid id)
+    {
+        return await _context.Tenants.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.Id == id);
+    }
+
+    public async Task SaveChangesAsync()
+    {
+        await _context.SaveChangesAsync();
+    }
+
+
 }
