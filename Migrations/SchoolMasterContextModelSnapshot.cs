@@ -418,7 +418,7 @@ namespace SchoolMaster.Migrations
 
                     b.HasIndex("AcademicYearId");
 
-                    b.HasIndex("TenantId", "AcademicYearId", "TermNumber")
+                    b.HasIndex("TenantId", "AcademicYearId")
                         .IsUnique()
                         .HasFilter("\"IsCurrent\" = true");
 
