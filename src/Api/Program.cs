@@ -1,5 +1,6 @@
 using SchoolMaster.Api.Middlewares;
 using SchoolMaster.Application.Services.Interfaces;
+using SchoolMaster.Infrastructure.Repositories;
 using Serilog;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -22,6 +23,7 @@ using SchoolMaster.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Npgsql;
 using System.Text.Json;
+using SchoolMaster.Api.Converters;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -42,6 +44,7 @@ try
         .AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+            options.JsonSerializerOptions.Converters.Add(new OptionalConverterFactory());
         });
     // 1. Tell ASP.NET Core to auto-validate requests using FluentValidation
     builder.Services.AddFluentValidationAutoValidation();
@@ -61,6 +64,12 @@ try
     builder.Services.AddScoped<IJwtService, JwtService>(); // This line was already there, just showing context
     builder.Services.AddScoped<IOtpService, OtpService>();
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+    builder.Services.AddScoped<IAcademicService, AcademicService>();
+    builder.Services.AddScoped<IAcademicYearRepository, AcademicYearRepository>();
+    builder.Services.AddScoped<IClassRepository, ClassRepository>();
+    builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
+    builder.Services.AddScoped<IPeriodRepository, PeriodRepository>();
+
 
 
     builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
@@ -147,6 +156,10 @@ try
     builder.Services.AddSwaggerGen(options =>
     {
         options.OperationFilter<SchoolMaster.Api.Swagger.TenantHeaderOperationFilter>();
+
+        var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+        options.IncludeXmlComments(xmlPath);
 
         options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
         {

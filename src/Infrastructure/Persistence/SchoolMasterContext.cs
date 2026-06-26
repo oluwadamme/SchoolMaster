@@ -11,11 +11,19 @@ namespace SchoolMaster.Infrastructure.Persistence;
 public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, ICurrentTenant _currentTenant) : DbContext(options)
 {
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<Enum>()
+            .HaveConversion<string>()
+            .HaveColumnType("text");
+    }
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
+        modelBuilder.Entity<User>().HasIndex(u => new { u.TenantId, u.Email}).IsUnique();
 
         modelBuilder.Entity<Tenant>().HasIndex(t => t.Subdomain).IsUnique();
 
@@ -28,6 +36,27 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
         modelBuilder.Entity<Staff>()
             .HasIndex(s => new { s.TenantId, s.StaffNumber })
             .IsUnique();
+        modelBuilder.Entity<Class>()
+            .HasIndex(c => new { c.TenantId, c.Name }).IsUnique();
+
+        modelBuilder.Entity<Subject>()
+            .HasIndex(s => new { s.TenantId, s.Name }).IsUnique();
+
+        modelBuilder.Entity<Term>()
+            .HasIndex(t => new { t.TenantId, t.AcademicYearId, t.TermNumber }).IsUnique();
+
+        // Enforce singleton active record — at most one current academic year per tenant
+        modelBuilder.Entity<AcademicYear>()
+            .HasIndex(y => y.TenantId)
+            .IsUnique()
+            .HasFilter("\"IsCurrent\" = true");
+
+        // At most one current term per academic year per tenant
+        modelBuilder.Entity<Term>()
+            .HasIndex(t => new { t.TenantId, t.AcademicYearId })
+            .IsUnique()
+            .HasFilter("\"IsCurrent\" = true");
+
         var jsonOptions = new JsonSerializerOptions
         {
             Converters = { new JsonStringEnumConverter() }
@@ -67,6 +96,27 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
             .HasForeignKey(u => u.TenantId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Period → Class relationship
+        modelBuilder.Entity<Period>()
+            .HasOne(p => p.Class)
+            .WithMany()
+            .HasForeignKey(p => p.ClassId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Period → Subject relationship (optional)
+        modelBuilder.Entity<Period>()
+            .HasOne(p => p.Subject)
+            .WithMany()
+            .HasForeignKey(p => p.SubjectId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Term → AcademicYear relationship
+        modelBuilder.Entity<Term>()
+            .HasOne(t => t.AcademicYear)
+            .WithMany(y => y.Terms)
+            .HasForeignKey(t => t.AcademicYearId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<Student>()
         .HasQueryFilter(s => s.TenantId == _currentTenant.Id);
 
@@ -76,6 +126,20 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
         modelBuilder.Entity<Staff>()
             .HasQueryFilter(s => s.TenantId == _currentTenant.Id);
 
+        modelBuilder.Entity<AcademicYear>()
+            .HasQueryFilter(a => a.TenantId == _currentTenant.Id);
+
+        modelBuilder.Entity<Term>()
+            .HasQueryFilter(t => t.TenantId == _currentTenant.Id);
+
+        modelBuilder.Entity<Class>()
+            .HasQueryFilter(c => c.TenantId == _currentTenant.Id);
+
+        modelBuilder.Entity<Subject>()
+            .HasQueryFilter(s => s.TenantId == _currentTenant.Id);
+
+        modelBuilder.Entity<Period>()
+            .HasQueryFilter(p => p.TenantId == _currentTenant.Id);
 
     }
 
@@ -83,4 +147,9 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
     public DbSet<Student> Students { get; set; }
     public DbSet<Staff> Staff { get; set; }
     public DbSet<Tenant> Tenants { get; set; }
+    public DbSet<AcademicYear> AcademicYears { get; set; }
+    public DbSet<Term> Terms { get; set; }
+    public DbSet<Class> Classes { get; set; }
+    public DbSet<Subject> Subjects { get; set; }
+    public DbSet<Period> Periods { get; set; }
 }
