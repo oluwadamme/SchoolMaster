@@ -51,7 +51,7 @@ public class OnboardingServiceTests
     [Fact]
     public async Task CreateTenantWithAdminAsync_WithValidRequest_ReturnsTenantIdInSuccessResponse()
     {
-        _userRepo.Setup(r => r.ExistsByEmailAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _userRepo.Setup(r => r.ExistsByEmailInTenantAsync(It.IsAny<string>(), It.IsAny<Guid>())).ReturnsAsync(false);
         _tenantRepo.Setup(r => r.ExistsBySubdomainAsync(It.IsAny<string>())).ReturnsAsync(false);
         _otpService.Setup(o => o.GenerateVerificationOtp()).Returns("1234");
 
@@ -64,7 +64,7 @@ public class OnboardingServiceTests
     [Fact]
     public async Task CreateTenantWithAdminAsync_WithValidRequest_CreatesTenantAndUnverifiedAdmin()
     {
-        _userRepo.Setup(r => r.ExistsByEmailAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _userRepo.Setup(r => r.ExistsByEmailInTenantAsync(It.IsAny<string>(), It.IsAny<Guid>())).ReturnsAsync(false);
         _tenantRepo.Setup(r => r.ExistsBySubdomainAsync(It.IsAny<string>())).ReturnsAsync(false);
         _otpService.Setup(o => o.GenerateVerificationOtp()).Returns("1234");
 
@@ -80,7 +80,7 @@ public class OnboardingServiceTests
     [Fact]
     public async Task CreateTenantWithAdminAsync_WithValidRequest_EnqueuesVerificationEmail()
     {
-        _userRepo.Setup(r => r.ExistsByEmailAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _userRepo.Setup(r => r.ExistsByEmailInTenantAsync(It.IsAny<string>(), It.IsAny<Guid>())).ReturnsAsync(false);
         _tenantRepo.Setup(r => r.ExistsBySubdomainAsync(It.IsAny<string>())).ReturnsAsync(false);
         _otpService.Setup(o => o.GenerateVerificationOtp()).Returns("1234");
 
@@ -92,7 +92,7 @@ public class OnboardingServiceTests
     [Fact]
     public async Task CreateTenantWithAdminAsync_WhenAdminEmailAlreadyExists_ThrowsAlreadyExistException()
     {
-        _userRepo.Setup(r => r.ExistsByEmailAsync(It.IsAny<string>())).ReturnsAsync(true);
+        _userRepo.Setup(r => r.ExistsByEmailInTenantAsync(It.IsAny<string>(), It.IsAny<Guid>())).ReturnsAsync(true);
 
         await Assert.ThrowsAsync<AlreadyExistException>(
             () => CreateSut().CreateTenantWithAdminAsync(MakeValidRequest()));
@@ -104,7 +104,7 @@ public class OnboardingServiceTests
     [Fact]
     public async Task CreateTenantWithAdminAsync_WhenSubdomainAlreadyExists_ThrowsAlreadyExistException()
     {
-        _userRepo.Setup(r => r.ExistsByEmailAsync(It.IsAny<string>())).ReturnsAsync(false);
+        _userRepo.Setup(r => r.ExistsByEmailInTenantAsync(It.IsAny<string>(), It.IsAny<Guid>())).ReturnsAsync(false);
         _tenantRepo.Setup(r => r.ExistsBySubdomainAsync(It.IsAny<string>())).ReturnsAsync(true);
 
         await Assert.ThrowsAsync<AlreadyExistException>(
@@ -131,7 +131,7 @@ public class OnboardingServiceTests
             IsEmailVerified = false,
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
 
         var result = await CreateSut().VerifyUserEmailAsync(new VerifyUserEmailRequest
         {
@@ -162,7 +162,7 @@ public class OnboardingServiceTests
     {
         var tenantId = Guid.NewGuid();
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(It.IsAny<string>(), tenantId))
+        _userRepo.Setup(r => r.GetUserByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync((User?)null);
 
         await Assert.ThrowsAsync<InvalidOtpException>(
@@ -183,7 +183,7 @@ public class OnboardingServiceTests
             OtpToken = "correct", OtpExpiry = DateTime.UtcNow.AddMinutes(15),
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
 
         await Assert.ThrowsAsync<InvalidOtpException>(
             () => CreateSut().VerifyUserEmailAsync(new VerifyUserEmailRequest
@@ -203,7 +203,7 @@ public class OnboardingServiceTests
             OtpToken = "1234", OtpExpiry = DateTime.UtcNow.AddMinutes(-5), // expired
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
 
         // VerifyUserEmailAsync bundles all failure modes in one if-statement,
         // so expired OTP produces InvalidOtpException, not OtpExpiredException.
@@ -229,7 +229,7 @@ public class OnboardingServiceTests
             IsEmailVerified = false, OtpToken = "old-otp",
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
         _otpService.Setup(o => o.GenerateVerificationOtp()).Returns("new-otp");
 
         var result = await CreateSut().ResendVerificationOtpAsync(new ResendOtpRequest { Email = user.Email });
@@ -248,7 +248,7 @@ public class OnboardingServiceTests
         var result = await CreateSut().ResendVerificationOtpAsync(new ResendOtpRequest { Email = "a@b.com" });
 
         Assert.True(result.Success);
-        _userRepo.Verify(r => r.GetUserByEmailAndTenantIdAsync(It.IsAny<string>(), It.IsAny<Guid>()), Times.Never);
+        _userRepo.Verify(r => r.GetUserByEmailAsync(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -256,7 +256,7 @@ public class OnboardingServiceTests
     {
         var tenantId = Guid.NewGuid();
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(It.IsAny<string>(), tenantId))
+        _userRepo.Setup(r => r.GetUserByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync((User?)null);
 
         var result = await CreateSut().ResendVerificationOtpAsync(new ResendOtpRequest { Email = "ghost@test.com" });
@@ -276,7 +276,7 @@ public class OnboardingServiceTests
             IsEmailVerified = true,
         };
         _currentTenant.SetupGet(t => t.Id).Returns(tenantId);
-        _userRepo.Setup(r => r.GetUserByEmailAndTenantIdAsync(user.Email, tenantId)).ReturnsAsync(user);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(user.Email)).ReturnsAsync(user);
 
         var result = await CreateSut().ResendVerificationOtpAsync(new ResendOtpRequest { Email = user.Email });
 

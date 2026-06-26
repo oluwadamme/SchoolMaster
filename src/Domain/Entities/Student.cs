@@ -9,6 +9,7 @@ public class Student
     public required Guid Id { get; set; }
     public required Guid UserId { get; set; }
     public required Guid TenantId { get; set; }
+    public Guid ClassId { get; set; }
     public required string StudentNumber { get; set; }
     public required string FirstName { get; set; }
     public required string LastName { get; set; }

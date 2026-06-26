@@ -83,6 +83,57 @@ namespace SchoolMaster.Migrations
                     b.ToTable("Classes");
                 });
 
+            modelBuilder.Entity("SchoolMaster.Domain.Entities.DailyAttendance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClassId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("MarkedByTeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TermId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClassId");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("TermId");
+
+                    b.HasIndex("TenantId", "StudentId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("DailyAttendances");
+                });
+
             modelBuilder.Entity("SchoolMaster.Domain.Entities.Period", b =>
                 {
                     b.Property<Guid>("Id")
@@ -364,12 +415,9 @@ namespace SchoolMaster.Migrations
 
                     b.HasIndex("AcademicYearId");
 
-                    b.HasIndex("TenantId", "AcademicYearId")
+                    b.HasIndex("TenantId", "AcademicYearId", "TermNumber")
                         .IsUnique()
                         .HasFilter("\"IsCurrent\" = true");
-
-                    b.HasIndex("TenantId", "AcademicYearId", "TermNumber")
-                        .IsUnique();
 
                     b.ToTable("Terms");
                 });
@@ -440,6 +488,27 @@ namespace SchoolMaster.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("SchoolMaster.Domain.Entities.DailyAttendance", b =>
+                {
+                    b.HasOne("SchoolMaster.Domain.Entities.Class", null)
+                        .WithMany()
+                        .HasForeignKey("ClassId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolMaster.Domain.Entities.Student", null)
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolMaster.Domain.Entities.Term", null)
+                        .WithMany()
+                        .HasForeignKey("TermId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SchoolMaster.Domain.Entities.Period", b =>

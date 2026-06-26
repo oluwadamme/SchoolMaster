@@ -9,5 +9,4 @@ public interface ITenantRepository
     Task<bool> ExistsBySubdomainAsync(string subdomain);
     Task<Tenant?> GetTenantBySubdomainAsync(string subdomain);
     Task<Tenant?> GetByIdAsync(Guid id);
-    
 }

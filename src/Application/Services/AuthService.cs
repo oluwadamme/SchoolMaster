@@ -2,6 +2,7 @@ using SchoolMaster.Application.DTOs;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Domain.CustomException;
+using SchoolMaster.Domain.Enums;
 using Serilog;
 using Hangfire;
 using Microsoft.Extensions.Options;
@@ -36,13 +37,8 @@ public class AuthService : IAuthService
 
     public async Task<BaseResponse<AuthResponse>> LoginAsync(LoginRequest request)
     {
-        // 1. Retrieve the TenantId found by the Middleware from the X-Tenant-Subdomain header
-        // so it knows the school to check for the login attempt
-        // if two schools have the same email for a user, this will make sure the user can only log in to the correct school.
-        var tenantId = _currentTenant.Id;
-
-        // 2. Find the user only within THAT specific school
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
+        // 1. Find the user by email. Tenant scoping is applied by the global query filter.
+        var user = await _userRepository.GetUserByEmailAsync(request.Email);
 
         // If no user is found with that email, it means the email is wrong.
         if (user == null)
@@ -57,6 +53,22 @@ public class AuthService : IAuthService
         if (!isPasswordValid)
         {
             throw new InvalidCredentialsException("Invalid email or password.");
+        }
+
+        // 3. Gate on account status — only AFTER the password is verified, so we never reveal an
+        // account's state to someone who has not proven they own it.
+        switch (user.Status)
+        {
+            case UserStatus.Active:
+                break;
+            case UserStatus.PendingVerification:
+                throw new EmailNotVerifiedException("Please verify your email address before logging in.");
+            case UserStatus.Inactive:
+                throw new AccountInactiveException(
+                    "Your account has been deactivated. Please contact your administrator.");
+            case UserStatus.Suspended:
+                throw new AccountInactiveException(
+                    "Your account has been suspended. Please contact your administrator.");
         }
 
         // 3. Create the two types of tokens.
@@ -144,9 +156,8 @@ public class AuthService : IAuthService
   
     public async Task<BaseResponse<bool>> DeactivateUserByEmailAsync(string email)
     {
-        // 1. Find the user by Email and TenantId (Safety first!)
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(email, _currentTenant.Id);
-        // var tenantId);
+        // Tenant scoping is applied by the global query filter (the caller is authenticated).
+        var user = await _userRepository.GetUserByEmailAsync(email);
 
         // If we can't find them, they might be in another school or already inactive
         if (user == null)
@@ -173,7 +184,7 @@ public class AuthService : IAuthService
 
             return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
         }
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
+        var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null)
         {
             Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
@@ -196,7 +207,13 @@ public class AuthService : IAuthService
     public async Task<BaseResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request)
     {
         var tenantId = _currentTenant.Id;
-        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, _currentTenant.Id);
+        if (tenantId == Guid.Empty)
+        {
+            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+
+            throw new InvalidOtpException("Invalid OTP or Email address.");
+        }
+        var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null || user.OtpToken != request.Otp)
         {
             Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);

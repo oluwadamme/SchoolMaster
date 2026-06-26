@@ -40,6 +40,4 @@ public class TenantRepository : ITenantRepository
     {
         await _context.SaveChangesAsync();
     }
-
-
 }
