@@ -237,7 +237,7 @@ public class AuthService : IAuthService
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null || user.OtpToken == null || user.OtpToken != request.Otp)
         {
-            Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Password flow target not found in tenant {TenantId}.", tenantId);
 
             // Count the wrong guess against the account and wipe the OTP once the budget is exhausted,
             // so a 6-digit code cannot be brute-forced within its lifetime.
