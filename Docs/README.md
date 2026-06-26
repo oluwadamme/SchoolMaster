@@ -30,11 +30,6 @@ This directory contains master guides and architectural documentation for the Sc
 - [CI/CD with GitHub Actions](Guides/github_actions_guide.md)
 - [API Versioning Strategy](Guides/api_versioning_guide.md)
 
-## 📚 Feature Guides
-
-- [Academic API — Entities, Terms, and Periods](Guides/academic_api_guide.md)
-- [Attendance API — Marking, Domain Events, and Notifications](Guides/attendance_api_guide.md)
-
 ## 🏢 Architecture Decisions
 
 - [Multi-Tenant Delivery Model](Guides/multitenant_delivery_guide.md)

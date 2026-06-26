@@ -2,7 +2,6 @@ using SchoolMaster.Application.DTOs;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Domain.CustomException;
-using SchoolMaster.Domain.Enums;
 using Serilog;
 using Hangfire;
 using Microsoft.Extensions.Options;
@@ -31,8 +30,9 @@ public class AuthService : IAuthService
 
     public async Task<BaseResponse<AuthResponse>> LoginAsync(LoginRequest request)
     {
-        // 1. Find the user by email. Tenant scoping is applied by the global query filter.
-        var user = await _userRepository.GetUserByEmailAsync(request.Email);
+        // 1. Find the user in the database using their email.
+        // The IUserRepository tool helps us do this.
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, _currentTenant.Id);
 
         // If no user is found with that email, it means the email is wrong.
         if (user == null)
@@ -47,22 +47,6 @@ public class AuthService : IAuthService
         if (!isPasswordValid)
         {
             throw new InvalidCredentialsException("Invalid email or password.");
-        }
-
-        // 3. Gate on account status — only AFTER the password is verified, so we never reveal an
-        // account's state to someone who has not proven they own it.
-        switch (user.Status)
-        {
-            case UserStatus.Active:
-                break;
-            case UserStatus.PendingVerification:
-                throw new EmailNotVerifiedException("Please verify your email address before logging in.");
-            case UserStatus.Inactive:
-                throw new AccountInactiveException(
-                    "Your account has been deactivated. Please contact your administrator.");
-            case UserStatus.Suspended:
-                throw new AccountInactiveException(
-                    "Your account has been suspended. Please contact your administrator.");
         }
 
         // 3. Create the two types of tokens.
@@ -148,10 +132,10 @@ public class AuthService : IAuthService
     }
 
   
-    public async Task<BaseResponse<bool>> DeactivateUserByEmailAsync(string email)
+    public async Task<BaseResponse<bool>> DeactivateUserByEmailAsync(string email, Guid tenantId)
     {
-        // Tenant scoping is applied by the global query filter (the caller is authenticated).
-        var user = await _userRepository.GetUserByEmailAsync(email);
+        // 1. Find the user by Email and TenantId (Safety first!)
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(email, tenantId);
 
         // If we can't find them, they might be in another school or already inactive
         if (user == null)
@@ -178,7 +162,7 @@ public class AuthService : IAuthService
 
             return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
         }
-        var user = await _userRepository.GetUserByEmailAsync(request.Email);
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, tenantId);
         if (user == null)
         {
             Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
@@ -208,7 +192,7 @@ public class AuthService : IAuthService
 
             throw new InvalidOtpException("Invalid OTP or Email address.");
         }
-        var user = await _userRepository.GetUserByEmailAsync(request.Email);
+        var user = await _userRepository.GetUserByEmailAndTenantIdAsync(request.Email, _currentTenant.Id);
         if (user == null || user.OtpToken != request.Otp)
         {
             Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);

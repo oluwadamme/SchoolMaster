@@ -135,41 +135,6 @@ public class AuthControllerTests : IClassFixture<SchoolMasterWebApplicationFacto
     }
 
     [Fact]
-    public async Task Login_AfterAccountDeactivated_Returns403()
-    {
-        var (subdomain, _, email, password) = await SeedTenantAsync();
-        var (accessToken, _) = await LoginAsync(email, password, subdomain);
-
-        // Admin deactivates their own account
-        var deactivate = new HttpRequestMessage(HttpMethod.Patch, "/api/v1/auth/users/deactivate-by-email")
-        {
-            Content = JsonContent.Create(new DeactivateUserByEmailRequest(email)),
-        };
-        deactivate.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        (await _client.SendAsync(deactivate)).EnsureSuccessStatusCode();
-
-        // A deactivated account must no longer be able to log in, even with correct credentials
-        var response = await _client.SendAsync(
-            BuildRequest(HttpMethod.Post, "/api/v1/auth/login", new { email, password }, subdomain));
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Login_WithUnverifiedAccount_Returns403()
-    {
-        // Onboard but do NOT verify the email — the admin stays PendingVerification
-        var req = MakeUniqueOnboardRequest();
-        (await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req)).EnsureSuccessStatusCode();
-
-        var response = await _client.SendAsync(BuildRequest(
-            HttpMethod.Post, "/api/v1/auth/login",
-            new { email = req.AdminEmail, password = req.AdminPassword }, req.Subdomain));
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
     public async Task Login_WithMissingEmailField_Returns400()
     {
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login",
