@@ -33,23 +33,20 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
         modelBuilder.Entity<Subject>()
             .HasIndex(s => new { s.TenantId, s.Name }).IsUnique();
 
+        modelBuilder.Entity<Term>()
+            .HasIndex(t => new { t.TenantId, t.AcademicYearId, t.TermNumber }).IsUnique();
+
         // Enforce singleton active record — at most one current academic year per tenant
         modelBuilder.Entity<AcademicYear>()
             .HasIndex(y => y.TenantId)
             .IsUnique()
             .HasFilter("\"IsCurrent\" = true");
 
-        // At most one current term per academic year per tenant.
-        // The key is (TenantId, AcademicYearId) only — including TermNumber would let two terms
-        // with different numbers both be current at once, which is exactly what we must prevent.
+        // At most one current term per academic year per tenant
         modelBuilder.Entity<Term>()
             .HasIndex(t => new { t.TenantId, t.AcademicYearId })
             .IsUnique()
             .HasFilter("\"IsCurrent\" = true");
-
-        modelBuilder.Entity<DailyAttendance>()
-            .HasIndex(a => new { a.TenantId, a.StudentId, a.Date })
-            .IsUnique(); // One record per student per day
 
         var jsonOptions = new JsonSerializerOptions
         {
@@ -111,27 +108,6 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
             .HasForeignKey(t => t.AcademicYearId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<DailyAttendance>()
-            .HasOne<Student>()
-            .WithMany()
-            .HasForeignKey(a => a.StudentId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        modelBuilder.Entity<DailyAttendance>()
-            .HasOne<Class>()
-            .WithMany()
-            .HasForeignKey(a => a.ClassId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        modelBuilder.Entity<DailyAttendance>()
-            .HasOne<Term>()
-            .WithMany()
-            .HasForeignKey(a => a.TermId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        modelBuilder.Entity<DailyAttendance>()
-            .HasQueryFilter(a => a.TenantId == _currentTenant.Id);
-
         modelBuilder.Entity<Student>()
         .HasQueryFilter(s => s.TenantId == _currentTenant.Id);
 
@@ -167,5 +143,4 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
     public DbSet<Class> Classes { get; set; }
     public DbSet<Subject> Subjects { get; set; }
     public DbSet<Period> Periods { get; set; }
-    public DbSet<DailyAttendance> DailyAttendances { get; set; }
 }

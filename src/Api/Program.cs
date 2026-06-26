@@ -1,5 +1,4 @@
 using SchoolMaster.Api.Middlewares;
-using SchoolMaster.Api.Filters;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Infrastructure.Repositories;
 using Serilog;
@@ -24,9 +23,6 @@ using Microsoft.AspNetCore.Authorization;
 using Npgsql;
 using System.Text.Json;
 using SchoolMaster.Api.Converters;
-using SchoolMaster.Infrastructure.Jobs;
-using SchoolMaster.Infrastructure.EventHandlers;
-using MediatR;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -43,12 +39,7 @@ try
 
 
     // Add services to the container.
-    builder.Services.AddControllers(options =>
-        {
-            // Commits the Unit of Work after each action but before the result is serialized,
-            // so a failed SaveChangesAsync surfaces as a catchable exception (see UnitOfWorkFilter).
-            options.Filters.Add<UnitOfWorkFilter>();
-        })
+    builder.Services.AddControllers()
         .AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
@@ -73,22 +64,6 @@ try
     builder.Services.AddScoped<IClassRepository, ClassRepository>();
     builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
     builder.Services.AddScoped<IPeriodRepository, PeriodRepository>();
-
-    // MediatR — register from both the API assembly and the assembly holding the domain-event
-    // handlers. Explicit so that splitting Infrastructure into its own project later cannot
-    // silently drop handler discovery and quietly stop firing absence notifications.
-    builder.Services.AddMediatR(cfg =>
-    {
-        cfg.RegisterServicesFromAssemblyContaining<Program>();
-        cfg.RegisterServicesFromAssemblyContaining<StudentMarkedAbsentEventHandler>();
-    });
-
-    // Attendance
-    builder.Services.AddScoped<ICurrentUser, CurrentUser>();
-    builder.Services.AddScoped<IAttendanceService, AttendanceService>();
-    builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
-    builder.Services.AddScoped<IStudentRepository, StudentRepository>();
-    builder.Services.AddScoped<IAbsenceNotificationJob, AbsenceNotificationJob>();
 
 
 
@@ -160,12 +135,6 @@ try
 
     var isTesting = builder.Environment.IsEnvironment("Testing");
 
-    // Swap job scheduler for a no-op in tests — no Hangfire server or storage needed
-    if (!isTesting)
-        builder.Services.AddScoped<IAttendanceJobScheduler, HangfireAttendanceJobScheduler>();
-    else
-        builder.Services.AddScoped<IAttendanceJobScheduler, NoOpAttendanceJobScheduler>();
-
     // Skip real Hangfire and server in testing environment
     if (!isTesting)
     {
@@ -230,8 +199,7 @@ try
 
     app.UseMiddleware<ExceptionMiddleware>();
     app.UseMiddleware<TenantResolverMiddleware>();
-    // Unit of Work now commits via UnitOfWorkFilter (an MVC action filter), not middleware,
-    // so a failed commit can still be turned into the correct error response.
+    app.UseMiddleware<UnitOfWorkMiddleware>();
     app.UseHttpsRedirection();
     app.UseSerilogRequestLogging(); // Add before UseAuthentication()
 

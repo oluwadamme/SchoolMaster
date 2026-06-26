@@ -19,21 +19,19 @@ public class UserRepository : IUserRepository
         // await _context.SaveChangesAsync();
     }
 
-    public async Task<bool> ExistsByEmailInTenantAsync(string email, Guid tenantId)
+    public async Task<bool> ExistsByEmailAsync(string email)
     {
-        // IgnoreQueryFilters: onboarding runs before the new tenant is the ambient tenant, so the
-        // global filter cannot scope this. The explicit tenantId gives the per-tenant guarantee.
-        // Email is unique per tenant (see the (TenantId, Email) index), not globally.
-        return await _context.Users
-            .IgnoreQueryFilters()
-            .AnyAsync(x => x.Email == email && x.TenantId == tenantId);
+        return await _context.Users.IgnoreQueryFilters().AnyAsync(x => x.Email == email);
     }
 
     public async Task<User?> GetUserByEmailAsync(string email)
     {
-        // Tenant scoping comes from the global query filter (_currentTenant.Id). Status is
-        // intentionally NOT filtered here: email-verification and password-reset flows operate on
-        // non-active users. The login flow enforces account status itself.
+        return await _context.Users
+            .FirstOrDefaultAsync(x => x.Email == email && x.Status == UserStatus.Active);
+    }
+
+    public async Task<User?> GetUserByEmailAndTenantIdAsync(string email, Guid tenantId)
+    {
         return await _context.Users
             .FirstOrDefaultAsync(x => x.Email == email);
     }
