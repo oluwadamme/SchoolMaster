@@ -8,7 +8,6 @@ using FluentValidation.AspNetCore;
 using SchoolMaster.Infrastructure.Options;
 using SchoolMaster.Application.Services;
 using SchoolMaster.Infrastructure.Services;
-using SchoolMaster.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
