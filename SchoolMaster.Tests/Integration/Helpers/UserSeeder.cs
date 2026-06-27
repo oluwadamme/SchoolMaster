@@ -34,6 +34,7 @@ public static class UserSeeder
             Subdomain = subdomain,
             ContactEmail = $"contact-{unique}@test.com",
             Status = TenantStatus.Active,
+            SchoolCode = "SEED",
             Plan = TenantPlan.Basic,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

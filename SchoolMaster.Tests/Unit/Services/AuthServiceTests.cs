@@ -59,10 +59,10 @@ public class AuthServiceTests
         Subdomain = subdomain,
         Status = TenantStatus.Active,
         Plan = TenantPlan.Basic,
+        SchoolCode = "TEST",
         ContactEmail = "contact@test.com",
         CreatedAt = DateTime.UtcNow,
         UpdatedAt = DateTime.UtcNow,
-
     };
 
     private static ClaimsPrincipal MakePrincipal(Guid userId, Guid tenantId) =>
