@@ -244,7 +244,8 @@ try
     app.UseAuthentication();   // ← BEFORE authorization
     app.UseAuthorization();    // ← AFTER authentication
                                // Configure the HTTP request pipeline.
-    if (!isTesting) app.UseRateLimiter();
+    var disableRateLimit = builder.Configuration.GetValue<bool>("RateLimiting:Disable", false);
+    if (!isTesting && !disableRateLimit) app.UseRateLimiter();
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();

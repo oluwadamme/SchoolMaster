@@ -44,8 +44,6 @@ public class StudentService : IStudentService
         // Generate Permanent ID: GHA/2024/0001
         var studentNumber = await GeneratePermanentStudentNumber(tenantId);
 
-        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-
         var user = new User
         {
             Id = Guid.NewGuid(),
@@ -77,11 +75,10 @@ public class StudentService : IStudentService
             MedicalNotes = request.MedicalNotes,
             PhotoUrl = request.PhotoUrl,
             Status = StudentStatus.Active,
-            EnrolledAt = DateTime.UtcNow
+            EnrolledAt = DateTime.UtcNow,
+            ClassId = request.ClassId
         };
         await _studentRepository.AddStudentAsync(student);
-
-        scope.Complete();
 
         var response = new StudentResponse(
             student.Id, 

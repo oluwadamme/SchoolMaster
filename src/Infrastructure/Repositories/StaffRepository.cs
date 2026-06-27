@@ -32,12 +32,5 @@ public class StaffRepository : IStaffRepository
             .OrderByDescending(s => s.StaffNumber)
             .Select(s => s.StaffNumber)
             .FirstOrDefaultAsync();
-    }
-
-    public async Task SaveChangesAsync()
-    {
-        await _context.SaveChangesAsync();
-    }
-
-  
+    }  
 }
