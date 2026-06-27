@@ -1,15 +1,22 @@
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
 using MimeKit;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Infrastructure.Options;
 using Serilog;
 namespace SchoolMaster.Infrastructure.Services;
 
-public class EmailService(IOptions<EmailOptions> options) : IEmailService
+public class EmailService(IOptions<EmailOptions> options, IHostEnvironment env) : IEmailService
 {
     public async Task SendEmailAsync(string email, string name, string subject, string body)
     {
+        if (env.IsDevelopment())
+        {
+            Log.Information("Skipping email sending in Development environment for target: {Email}", email);
+            return;
+        }
+
         try
         {
             var smtpServer = options.Value.SmtpServer;
