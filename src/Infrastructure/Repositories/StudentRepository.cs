@@ -19,7 +19,6 @@ public class StudentRepository : IStudentRepository
     public async Task AddStudentAsync(Student student)
     {
         await _context.Students.AddAsync(student);
-        await _context.SaveChangesAsync();
     }
 
     public async Task<bool> ExistsByStudentNumberAsync(string studentNumber, Guid tenantId)
@@ -58,9 +57,4 @@ public class StudentRepository : IStudentRepository
         await _context.Students
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(s => s.Id == studentId && s.TenantId == tenantId);
-
-    public async Task SaveChangesAsync()
-    {
-        await _context.SaveChangesAsync();
-    }
 }

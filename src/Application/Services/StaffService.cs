@@ -58,8 +58,6 @@ public class StaffService : IStaffService
         // Generate the unique Staff Number automatically
         var staffNumber = await GenerateStaffNumber(tenantId);
 
-        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-       
         var otp = _otpService.GenerateVerificationOtp();
         var otpExpiry = DateTime.UtcNow.AddDays(7); // Extended 7-day expiry for staff invitations
 
@@ -101,7 +99,6 @@ public class StaffService : IStaffService
 
         await _staffRepository.AddStaffAsync(staff);
 
-        scope.Complete();
         // Staff Invitation through email When account is created (database has staff info)
         var subject = "Action Required: Verify Your SchoolMaster Staff Account";
         var body = $"Hello {request.FirstName},\n\nYou have been added as a staff member. Please use the code below to verify your email and activate your account:\n\nVerification Code: {otp}\n\nThis invitation will expire in 7 days. Once verified, you can log in using the credentials provided by your administrator.";

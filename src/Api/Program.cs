@@ -221,7 +221,10 @@ try
 
     if (!isTesting)
     {
-        app.UseHangfireDashboard();
+        app.UseHangfireDashboard("/hangfire", new DashboardOptions
+        {
+            Authorization = new[] { new AllowAllDashboardAuthorizationFilter() }
+        });
         using (var scope = app.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<SchoolMasterContext>();
@@ -244,7 +247,8 @@ try
     app.UseAuthentication();   // ← BEFORE authorization
     app.UseAuthorization();    // ← AFTER authentication
                                // Configure the HTTP request pipeline.
-    if (!isTesting) app.UseRateLimiter();
+    var disableRateLimit = builder.Configuration.GetValue<bool>("RateLimiting:Disable", false);
+    if (!isTesting && !disableRateLimit) app.UseRateLimiter();
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
@@ -266,3 +270,11 @@ finally
 
 // Required so WebApplicationFactory<Program> in integration tests can access this type.
 public partial class Program { }
+
+public class AllowAllDashboardAuthorizationFilter : Hangfire.Dashboard.IDashboardAuthorizationFilter
+{
+    public bool Authorize(Hangfire.Dashboard.DashboardContext context)
+    {
+        return true;
+    }
+}
