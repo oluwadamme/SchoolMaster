@@ -100,3 +100,6 @@ Desktop.ini
 *~
 src/Api/appsettings.json
 .vscode/
+
+reports/
+logs_*

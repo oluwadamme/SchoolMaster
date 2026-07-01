@@ -14,7 +14,8 @@ public record CreateStudentRequest(
     string GuardianPhone,
     string GuardianEmail,
     string? MedicalNotes,
-    string? PhotoUrl
+    string? PhotoUrl,
+    Guid ClassId
 );
 
 public class CreateStudentRequestValidator : AbstractValidator<CreateStudentRequest>

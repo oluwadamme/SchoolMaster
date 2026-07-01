@@ -10,5 +10,4 @@ public interface IStaffRepository
     Task<Staff?> GetStaffByIdAsync(Guid staffId);
     Task<bool> ExistsByStaffNumberAsync(string staffNumber, Guid tenantId);
     Task<string?> GetLastStaffNumberAsync(Guid tenantId, string prefix);
-    Task SaveChangesAsync();
 }
