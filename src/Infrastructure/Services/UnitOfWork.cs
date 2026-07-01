@@ -12,6 +12,7 @@ public class UnitOfWork : IUnitOfWork
     public UnitOfWork(SchoolMasterContext context, IMediator mediator) { _context = context; _mediator = mediator; }
     public async Task SaveChangesAsync()
     {
+        // finds all entities that have domain events 
         var entityEntries = _context.ChangeTracker
             .Entries<IHasDomainEvents>()
             .Where(e => e.Entity.DomainEvents.Count > 0)
@@ -27,6 +28,7 @@ public class UnitOfWork : IUnitOfWork
         await _context.SaveChangesAsync();
 
         // Dispatch AFTER commit — Hangfire only enqueues if the DB write succeeded.
+        //publish event(s) after DB write successfully
         foreach (var domainEvent in events)
             await _mediator.Publish(domainEvent);
     }

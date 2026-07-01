@@ -14,6 +14,8 @@ public record AttendanceEntryRequest(
 public record MarkAttendanceRequest(
     Guid ClassId,
     DateOnly Date,
+
+    // <‑‑ a collection of individual student records in the same request
     List<AttendanceEntryRequest> Records
 );
 

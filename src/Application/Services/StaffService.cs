@@ -41,6 +41,55 @@ public class StaffService : IStaffService
         _emailOptions = emailOptions;
     }
 
+    public async Task<BaseResponse<StaffResponse>> UpdateStaffAsync(UpdateStaffRequest request)
+    {
+        var tenantId = _currentTenant.Id;
+        if (tenantId == Guid.Empty)
+        {
+            throw new UnauthorizedAccessException("Tenant ID not found for the current user.");
+        }
+
+        // Assume IStaffRepository provides GetStaffByIdAsync
+        var staff = await _staffRepository.GetStaffByIdAsync(request.StaffId);
+        if (staff == null)
+        {
+            return BaseResponse<StaffResponse>.FailureResponse("Staff not found.");
+        }
+
+        // Fetch associated user
+        var user = await _userRepository.GetUserByIdAsync(staff.UserId, tenantId);
+        if (user == null)
+        {
+            return BaseResponse<StaffResponse>.FailureResponse("Associated user not found.");
+        }
+
+        // Update mutable fields if provided
+        if (request.FirstName.HasValue) { staff.FirstName = request.FirstName.Value; user.FirstName = request.FirstName.Value; }
+        if (request.LastName.HasValue) { staff.LastName = request.LastName.Value; user.LastName = request.LastName.Value; }
+        if (request.Email.HasValue) { user.Email = request.Email.Value; }
+        if (request.Department.HasValue) staff.Department = request.Department.Value;
+        if (request.StaffRole.HasValue) staff.StaffRole = request.StaffRole.Value;
+        if (request.EmploymentType.HasValue) staff.EmploymentType = request.EmploymentType.Value;
+
+        // Persist changes
+        await _staffRepository.SaveChangesAsync();
+        await _userRepository.UpdateUserAsync(user);
+        await _userRepository.SaveChangesAsync();
+
+        var response = new StaffResponse(
+            staff.Id,
+            staff.UserId,
+            staff.TenantId,
+            staff.StaffNumber,
+            staff.FirstName,
+            staff.LastName,
+            staff.Department,
+            staff.StaffRole,
+            staff.EmploymentType);
+
+        return BaseResponse<StaffResponse>.SuccessResponse("Staff updated successfully.", response);
+    }
+
     public async Task<BaseResponse<StaffResponse>> CreateStaffAsync(CreateStaffRequest request)
     {
         var tenantId = _currentTenant.Id;

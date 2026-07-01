@@ -27,8 +27,71 @@ public class StudentService : IStudentService
         _currentTenant = currentTenant;
     }
 
-    public async Task<BaseResponse<StudentResponse>> CreateStudentAsync(CreateStudentRequest request)
+    // Update student and associated user
+    public async Task<BaseResponse<StudentResponse>> UpdateStudentAsync(UpdateStudentRequest request)
     {
+        var tenantId = _currentTenant.Id;
+        if (tenantId == Guid.Empty)
+        {
+            throw new UnauthorizedAccessException("Tenant ID not found for the current user.");
+        }
+
+        // Fetch existing student (ignoring global filters for safety)
+        var student = await _studentRepository.GetStudentByIdIgnoringFiltersAsync(request.StudentId, tenantId);
+        if (student == null)
+        {
+            return BaseResponse<StudentResponse>.FailureResponse("Student not found.");
+        }
+
+        // Fetch associated user
+        var user = await _userRepository.GetUserByIdAsync(student.UserId, tenantId);
+        if (user == null)
+        {
+            return BaseResponse<StudentResponse>.FailureResponse("Associated user not found.");
+        }
+
+        // Update mutable fields if provided
+        if (request.FirstName.HasValue) { student.FirstName = request.FirstName.Value; user.FirstName = request.FirstName.Value; }
+        if (request.LastName.HasValue) { student.LastName = request.LastName.Value; user.LastName = request.LastName.Value; }
+        if (request.Email.HasValue && request.Email.Value != user.Email)
+        {
+            // Ensure unique email within tenant
+            if (await _userRepository.ExistsByEmailAndTenantIdAsync(request.Email.Value, tenantId))
+            {
+                throw new AlreadyExistException($"Email {request.Email.Value} is already registered.");
+            }
+            user.Email = request.Email.Value;
+        }
+        if (request.DateOfBirth.HasValue) student.DateOfBirth = request.DateOfBirth.Value;
+        if (request.Gender.HasValue) student.Gender = request.Gender.Value;
+        if (request.GuardianName.HasValue) student.GuardianName = request.GuardianName.Value;
+        if (request.GuardianPhone.HasValue) student.GuardianPhone = request.GuardianPhone.Value;
+        if (request.GuardianEmail.HasValue) student.GuardianEmail = request.GuardianEmail.Value;
+        if (request.MedicalNotes.HasValue) student.MedicalNotes = request.MedicalNotes.Value;
+        if (request.PhotoUrl.HasValue) student.PhotoUrl = request.PhotoUrl.Value;
+
+        // Persist changes
+        await _userRepository.UpdateUserAsync(user);
+        await _studentRepository.SaveChangesAsync();
+
+        var response = new StudentResponse(
+            student.Id,
+            student.TenantId,
+            student.FirstName,
+            student.LastName,
+            student.StudentNumber,
+            student.DateOfBirth,
+            student.Gender,
+            student.GuardianName,
+            student.GuardianPhone,
+            student.GuardianEmail,
+            student.PhotoUrl);
+
+        return BaseResponse<StudentResponse>.SuccessResponse("Student updated successfully.", response);
+    }
+
+    // Existing CreateStudentAsync method follows
+
         var tenantId = _currentTenant.Id;
         if (tenantId == Guid.Empty)
         {

@@ -87,6 +87,8 @@ public class AcademicController : ControllerBase
     /// </remarks>
     [HasPermission(Permission.AcademicManage)]
     [HttpGet("years/{yearId:guid}/terms")]
+    // In the route string "years/{yearId:guid}/terms" the part {yearId:guid} is a placeholder.
+    // It tells the web framework: “When a request comes in, there will be a value in this position, and I want to capture it.”
     public async Task<ActionResult<BaseResponse<List<TermResponse>>>> GetTermsByYear(Guid yearId)
     {
         var result = await _academicService.GetTermsByYearAsync(yearId);
@@ -148,6 +150,7 @@ public class AcademicController : ControllerBase
     [HttpPatch("classes/{classId:guid}")]
     public async Task<ActionResult<BaseResponse<ClassResponse>>> UpdateClass(
         Guid classId, [FromBody] UpdateClassRequest request)
+        
     {
         var result = await _academicService.UpdateClassAsync(classId, request);
         return Ok(result);

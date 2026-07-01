@@ -7,4 +7,5 @@ public interface IStaffService
 {
     Task<BaseResponse<StaffResponse>> CreateStaffAsync(CreateStaffRequest request);
     Task<BaseResponse<bool>> ResendStaffInvitationAsync(ResendOtpRequest request);
+    Task<BaseResponse<StaffResponse>> UpdateStaffAsync(UpdateStaffRequest request);
 }

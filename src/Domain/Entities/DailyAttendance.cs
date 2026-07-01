@@ -40,7 +40,15 @@ public class DailyAttendance : IHasDomainEvents
             CreatedAt = DateTime.UtcNow
         };
 
+        // When a student is marked absent, the system must do two things:
+
+// Notify the rest of the program that “this student was absent on this date”.
+// Schedule a background job that will later send a notification (for example, an email or a push message) to the student’s parents or school staff.
+
         if (status == AttendanceStatus.Absent)
+        // creates an event that says the student was absent on this day for any students that was absent
+        // in the collection of student records passed in the request and adds all events to _domainEvents
+        // event being new StudentMarkedAbsentEvent() 
             record._domainEvents.Add(new StudentMarkedAbsentEvent(tenantId, studentId, date));
 
         return record;
