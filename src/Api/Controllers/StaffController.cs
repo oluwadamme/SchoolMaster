@@ -4,6 +4,7 @@ using SchoolMaster.Application.DTOs;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Api.Authorization;
 using SchoolMaster.Domain.Enums;
+using System.Collections.Generic;
 
 namespace SchoolMaster.Api.Controllers;
 
@@ -32,13 +33,15 @@ public class StaffController : ControllerBase
         return CreatedAtAction(nameof(CreateStaff), new { id = response.Data?.Id }, response);
     }
 
-    [HttpPut]
-    [HasPermission(Permission.StaffManage)] // Only admins can update staff
-    public async Task<ActionResult<BaseResponse<StaffResponse>>> UpdateStaff([FromBody] UpdateStaffRequest request)
-    {
-        var response = await _staffService.UpdateStaffAsync(request);
-        return Ok(response);
-    }
+[HttpPost("bulk")]
+[HasPermission(Permission.StaffManage)] // Bulk enrollment for admins
+public async Task<ActionResult<BaseResponse<IReadOnlyList<BaseResponse<StaffResponse>>>>> EnrollStaffBulk([FromBody] IEnumerable<CreateStaffRequest> requests)
+{
+    var response = await _staffService.EnrollStaffBulkAsync(requests);
+    return Ok(response);
+}
+
+
 
     /// <summary>
     /// Resends the 7-day invitation email to a staff member.

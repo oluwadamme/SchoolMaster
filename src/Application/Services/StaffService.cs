@@ -8,6 +8,7 @@ using SchoolMaster.Domain.Entities;
 using SchoolMaster.Domain.Enums;
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Transactions;
 using Hangfire;
 using Microsoft.Extensions.Options;
@@ -53,14 +54,14 @@ public class StaffService : IStaffService
         var staff = await _staffRepository.GetStaffByIdAsync(request.StaffId);
         if (staff == null)
         {
-            return BaseResponse<StaffResponse>.FailureResponse("Staff not found.");
+            throw new KeyNotFoundException("Staff not found.");
         }
 
         // Fetch associated user
         var user = await _userRepository.GetUserByIdAsync(staff.UserId, tenantId);
         if (user == null)
         {
-            return BaseResponse<StaffResponse>.FailureResponse("Associated user not found.");
+            throw new KeyNotFoundException("Associated user not found.");
         }
 
         // Update mutable fields if provided
@@ -166,6 +167,31 @@ public class StaffService : IStaffService
             staff.EmploymentType);
 
         return BaseResponse<StaffResponse>.SuccessResponse("Staff created successfully.", staffResponse);
+    }
+
+    // ✅ Bulk enrollment for staff with partial success
+    public async Task<BaseResponse<IReadOnlyList<BaseResponse<StaffResponse>>>> EnrollStaffBulkAsync(IEnumerable<CreateStaffRequest> requests)
+    {
+        var results = new List<BaseResponse<StaffResponse>>();
+        foreach (var request in requests)
+        {
+            try
+            {
+                var result = await CreateStaffAsync(request);
+                // if this method throws an error then the unit of work for this specific request will not be executed
+                results.Add(result);
+            }
+            catch (Exception ex)
+            {
+                // the error thrown is wrapped as a failure response for this item
+                // Note: if we rethrow here it would travel up the call stack and nothing will be saved for this request
+                var failure = BaseResponse<StaffResponse>.FailureResponse($"Bulk staff enrollment failed: {ex.Message}");
+                results.Add(failure);
+            }
+        }
+
+        return BaseResponse<IReadOnlyList<BaseResponse<StaffResponse>>>.SuccessResponse(
+            "Bulk staff enrollment completed.", results);
     }
 
     public async Task<BaseResponse<bool>> ResendStaffInvitationAsync(ResendOtpRequest request)

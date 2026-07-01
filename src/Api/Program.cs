@@ -45,6 +45,7 @@ try
     // Add services to the container.
     builder.Services.AddControllers(options =>
         {
+            // runs after every controller action
             // Commits the Unit of Work after each action but before the result is serialized,
             // so a failed SaveChangesAsync surfaces as a catchable exception (see UnitOfWorkFilter).
             options.Filters.Add<UnitOfWorkFilter>();

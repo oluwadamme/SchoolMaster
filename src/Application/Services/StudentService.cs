@@ -4,6 +4,8 @@ using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Domain.CustomException;
 using SchoolMaster.Domain.Entities;
 using SchoolMaster.Domain.Enums;
+using System;
+using System.Collections.Generic;
 using System.Transactions;
 
 namespace SchoolMaster.Application.Services;
@@ -90,8 +92,8 @@ public class StudentService : IStudentService
         return BaseResponse<StudentResponse>.SuccessResponse("Student updated successfully.", response);
     }
 
-    // Existing CreateStudentAsync method follows
-
+    public async Task<BaseResponse<StudentResponse>> CreateStudentAsync(CreateStudentRequest request)
+    {
         var tenantId = _currentTenant.Id;
         if (tenantId == Guid.Empty)
         {
@@ -138,8 +140,7 @@ public class StudentService : IStudentService
             MedicalNotes = request.MedicalNotes,
             PhotoUrl = request.PhotoUrl,
             Status = StudentStatus.Active,
-            EnrolledAt = DateTime.UtcNow,
-            ClassId = request.ClassId
+            EnrolledAt = DateTime.UtcNow
         };
         await _studentRepository.AddStudentAsync(student);
 
@@ -158,6 +159,33 @@ public class StudentService : IStudentService
         
         return BaseResponse<StudentResponse>.SuccessResponse("Student enrolled successfully.", response);
     }
+
+    // Bulk enrollment for multiple students with per‑item error handling
+    public async Task<BaseResponse<IReadOnlyList<BaseResponse<StudentResponse>>>> EnrollStudentsBulkAsync(IEnumerable<CreateStudentRequest> requests)
+    {
+        var itemResults = new List<BaseResponse<StudentResponse>>();
+        foreach (var request in requests)
+        {
+            try
+            {
+                var result = await CreateStudentAsync(request);
+                // if this method throws an error then obviously unit of work supposed to be thrown for this controller method 
+                // will not be executed for this specific request
+                itemResults.Add(result);
+            }
+            catch (Exception ex)
+            {
+                // the error thrown is wrapped as a failure response for this item
+                // Note: if we throw an error here again, it will travel up the call stack and nothing will be saved
+                var failure = BaseResponse<StudentResponse>.FailureResponse($"Bulk student enrollment failed: {ex.Message}");
+                itemResults.Add(failure);
+            }
+        }
+        return BaseResponse<IReadOnlyList<BaseResponse<StudentResponse>>>.SuccessResponse(
+            "Bulk student enrollment completed.", itemResults);
+    }
+    
+
 
     private async Task<string> GeneratePermanentStudentNumber(Guid tenantId)
     {
