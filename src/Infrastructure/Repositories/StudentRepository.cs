@@ -21,6 +21,11 @@ public class StudentRepository : IStudentRepository
         await _context.Students.AddAsync(student);
     }
 
+    public async Task AddStudentsBulkAsync(IEnumerable<Student> students)
+    {
+        await _context.Students.AddRangeAsync(students);
+    }
+
     public async Task<bool> ExistsByStudentNumberAsync(string studentNumber, Guid tenantId)
     {
         return await _context.Students

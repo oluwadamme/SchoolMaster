@@ -37,5 +37,14 @@ public class StudentsController : ControllerBase
         return Ok(response);
     }
 
-
+    /// <summary>
+    /// Updates an existing student.
+    /// </summary>
+    [HttpPut]
+    [HasPermission(Permission.StudentsUpdate)]
+    public async Task<ActionResult<BaseResponse<StudentResponse>>> UpdateStudent([FromBody] UpdateStudentRequest request)
+    {
+        var response = await _studentService.UpdateStudentAsync(request);
+        return Ok(response);
+    }
 }

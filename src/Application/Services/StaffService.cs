@@ -45,10 +45,6 @@ public class StaffService : IStaffService
     public async Task<BaseResponse<StaffResponse>> UpdateStaffAsync(UpdateStaffRequest request)
     {
         var tenantId = _currentTenant.Id;
-        if (tenantId == Guid.Empty)
-        {
-            throw new UnauthorizedAccessException("Tenant ID not found for the current user.");
-        }
 
         // Assume IStaffRepository provides GetStaffByIdAsync
         var staff = await _staffRepository.GetStaffByIdAsync(request.StaffId);
@@ -64,18 +60,25 @@ public class StaffService : IStaffService
             throw new KeyNotFoundException("Associated user not found.");
         }
 
+        if (request.Email.HasValue && request.Email.Value != null && request.Email.Value != user.Email)
+        {
+            // Ensure unique email within tenant
+            if (await _userRepository.ExistsByEmailAndTenantIdAsync(request.Email.Value, tenantId))
+            {
+                throw new AlreadyExistException($"Email {request.Email.Value} is already registered.");
+            }
+            user.Email = request.Email.Value;
+        }
+
         // Update mutable fields if provided
         if (request.FirstName.HasValue) { staff.FirstName = request.FirstName.Value; user.FirstName = request.FirstName.Value; }
         if (request.LastName.HasValue) { staff.LastName = request.LastName.Value; user.LastName = request.LastName.Value; }
-        if (request.Email.HasValue) { user.Email = request.Email.Value; }
         if (request.Department.HasValue) staff.Department = request.Department.Value;
         if (request.StaffRole.HasValue) staff.StaffRole = request.StaffRole.Value;
         if (request.EmploymentType.HasValue) staff.EmploymentType = request.EmploymentType.Value;
 
         // Persist changes
-        await _staffRepository.SaveChangesAsync();
         await _userRepository.UpdateUserAsync(user);
-        await _userRepository.SaveChangesAsync();
 
         var response = new StaffResponse(
             staff.Id,
@@ -170,26 +173,116 @@ public class StaffService : IStaffService
     }
 
     // ✅ Bulk enrollment for staff with partial success
+    //  the code takes all 1,000 students and puts them into one big group in the computer's memory.
+    // Then, it connects to the database exactly one time
     public async Task<BaseResponse<IReadOnlyList<BaseResponse<StaffResponse>>>> EnrollStaffBulkAsync(IEnumerable<CreateStaffRequest> requests)
     {
-        var results = new List<BaseResponse<StaffResponse>>();
-        foreach (var request in requests)
+        var tenantId = _currentTenant.Id;
+        if (tenantId == Guid.Empty) throw new UnauthorizedAccessException("Tenant ID not found for the current user.");
+
+        var requestList = requests.ToList();
+        if (!requestList.Any()) 
+            return BaseResponse<IReadOnlyList<BaseResponse<StaffResponse>>>.SuccessResponse("No staff to enroll.", new List<BaseResponse<StaffResponse>>());
+
+        // 1. Make a list of request emails and fetch all emails that already exist in the database
+        var emails = requestList.Select(x => x.Email).Distinct().ToList();
+        var existingEmails = await _userRepository.GetExistingEmailsAsync(emails, tenantId);
+
+        // 2. Fetch sequence for staff number
+        var tenant = await _tenantRepository.GetByIdAsync(tenantId);
+        if (tenant == null) throw new TenantNotFoundException("School identification not found.");
+
+        var year = DateTime.UtcNow.Year;
+        var prefix = $"{tenant.SchoolCode}/STF/{year}/";
+        var lastCode = await _staffRepository.GetLastStaffNumberAsync(tenantId, prefix);
+        // logic for assigning the next staff number
+        int nextSequence = 1;
+        if (lastCode != null)
         {
-            try
+            var parts = lastCode.Split('/');
+            if (parts.Length == 4 && int.TryParse(parts[3], out int lastSeq))
             {
-                var result = await CreateStaffAsync(request);
-                // if this method throws an error then the unit of work for this specific request will not be executed
-                results.Add(result);
-            }
-            catch (Exception ex)
-            {
-                // the error thrown is wrapped as a failure response for this item
-                // Note: if we rethrow here it would travel up the call stack and nothing will be saved for this request
-                var failure = BaseResponse<StaffResponse>.FailureResponse($"Bulk staff enrollment failed: {ex.Message}");
-                results.Add(failure);
+                nextSequence = lastSeq + 1;
             }
         }
 
+        var results = new List<BaseResponse<StaffResponse>>();
+        var usersToInsert = new List<User>();
+        var staffToInsert = new List<Staff>();
+        
+        // incase there are duplicate emails in the request list itself, we create an empty box
+        // that checks and adds each email as they are processed and if there's a duplicate
+        // the error is recorded
+        var processedEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var request in requestList)
+        {
+            // here we check for the email if it's already in the database or 
+            // if it's already been processed in this request
+            if (existingEmails.Contains(request.Email) || processedEmails.Contains(request.Email))
+            {
+                results.Add(BaseResponse<StaffResponse>.ErrorResponse($"Staff with email '{request.Email}' already exists."));
+                continue;
+            }
+
+            var staffNumber = $"{prefix}{nextSequence:D6}";
+            nextSequence++;
+
+            var otp = _otpService.GenerateVerificationOtp();
+            var otpExpiry = DateTime.UtcNow.AddDays(7);
+            
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                Email = request.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                Roles = new List<UserRole> { UserRole.Teacher },
+                Status = UserStatus.PendingVerification,
+                IsEmailVerified = false,
+                OtpToken = otp,
+                OtpExpiry = otpExpiry,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            var staff = new Staff
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                TenantId = tenantId,
+                StaffNumber = staffNumber,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                Department = request.Department,
+                StaffRole = request.StaffRole,
+                EmploymentType = request.EmploymentType,
+                Status = StaffStatus.Active,
+                EmployedAt = DateTime.UtcNow
+            };
+
+            usersToInsert.Add(user);
+            staffToInsert.Add(staff);
+            // emails that have been processed added to the hashset
+            processedEmails.Add(request.Email);
+
+            // Queue background email
+            var subject = "Verify Your SchoolMaster Staff Account";
+            var body = $"Hello {user.FirstName},\n\nYou have been invited to join SchoolMaster as staff. Please use the code below to verify your email:\n\nVerification Code: {otp}\n\nThis code will expire in 7 days.";
+            _backgroundJobClient.Enqueue<IEmailService>(x => x.SendEmailAsync(user.Email, user.FirstName, subject, body));
+
+            var staffResponse = new StaffResponse(staff.Id, staff.UserId, staff.TenantId, staff.StaffNumber, staff.FirstName, staff.LastName, staff.Department, staff.StaffRole, staff.EmploymentType);
+            results.Add(BaseResponse<StaffResponse>.SuccessResponse("Staff created successfully.", staffResponse));
+        }
+        // add all users to database at once
+
+        if (usersToInsert.Any())
+        {
+            await _userRepository.AddUsersBulkAsync(usersToInsert);
+            await _staffRepository.AddStaffBulkAsync(staffToInsert);
+        }
         return BaseResponse<IReadOnlyList<BaseResponse<StaffResponse>>>.SuccessResponse(
             "Bulk staff enrollment completed.", results);
     }

@@ -23,28 +23,28 @@ public class UpdateStudentRequestValidator : AbstractValidator<UpdateStudentRequ
     public UpdateStudentRequestValidator()
     {
         RuleFor(x => x.StudentId).NotEmpty().WithMessage("StudentId is required.");
-        When(x => x.FirstName != null, () => {
-            RuleFor(x => x.FirstName!).MinimumLength(2).WithMessage("First name must be at least 2 characters.");
+        When(x => x.FirstName.HasValue && x.FirstName.Value != null, () => {
+            RuleFor(x => x.FirstName.Value!).MinimumLength(2).WithMessage("First name must be at least 2 characters.");
         });
-        When(x => x.LastName != null, () => {
-            RuleFor(x => x.LastName!).MinimumLength(2).WithMessage("Last name must be at least 2 characters.");
+        When(x => x.LastName.HasValue && x.LastName.Value != null, () => {
+            RuleFor(x => x.LastName.Value!).MinimumLength(2).WithMessage("Last name must be at least 2 characters.");
         });
-        When(x => x.Email != null, () => {
-            RuleFor(x => x.Email!).EmailAddress().WithMessage("Invalid email format.");
+        When(x => x.Email.HasValue && x.Email.Value != null, () => {
+            RuleFor(x => x.Email.Value!).EmailAddress().WithMessage("Invalid email format.");
         });
-        When(x => x.DateOfBirth != null, () => {
-            RuleFor(x => x.DateOfBirth!.Value)
+        When(x => x.DateOfBirth.HasValue, () => {
+            RuleFor(x => x.DateOfBirth.Value)
                 .LessThan(DateOnly.FromDateTime(DateTime.UtcNow))
                 .WithMessage("Date of birth cannot be in the future.");
         });
-        When(x => x.GuardianName != null, () => {
-            RuleFor(x => x.GuardianName!).MinimumLength(2).WithMessage("Guardian name must be at least 2 characters.");
+        When(x => x.GuardianName.HasValue && x.GuardianName.Value != null, () => {
+            RuleFor(x => x.GuardianName.Value!).MinimumLength(2).WithMessage("Guardian name must be at least 2 characters.");
         });
-        When(x => x.GuardianPhone != null, () => {
-            RuleFor(x => x.GuardianPhone!).NotEmpty().WithMessage("Guardian phone is required.");
+        When(x => x.GuardianPhone.HasValue && x.GuardianPhone.Value != null, () => {
+            RuleFor(x => x.GuardianPhone.Value!).NotEmpty().WithMessage("Guardian phone is required.");
         });
-        When(x => x.GuardianEmail != null, () => {
-            RuleFor(x => x.GuardianEmail!).EmailAddress().WithMessage("Invalid guardian email format.");
+        When(x => x.GuardianEmail.HasValue && x.GuardianEmail.Value != null, () => {
+            RuleFor(x => x.GuardianEmail.Value!).EmailAddress().WithMessage("Invalid guardian email format.");
         });
     }
 }

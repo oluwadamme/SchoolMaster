@@ -33,48 +33,35 @@ public class StudentService : IStudentService
     public async Task<BaseResponse<StudentResponse>> UpdateStudentAsync(UpdateStudentRequest request)
     {
         var tenantId = _currentTenant.Id;
-        if (tenantId == Guid.Empty)
-        {
-            throw new UnauthorizedAccessException("Tenant ID not found for the current user.");
-        }
 
         // Fetch existing student (ignoring global filters for safety)
         var student = await _studentRepository.GetStudentByIdIgnoringFiltersAsync(request.StudentId, tenantId);
         if (student == null)
         {
-            return BaseResponse<StudentResponse>.FailureResponse("Student not found.");
+            throw new KeyNotFoundException("Student not found.");
         }
 
         // Fetch associated user
         var user = await _userRepository.GetUserByIdAsync(student.UserId, tenantId);
         if (user == null)
         {
-            return BaseResponse<StudentResponse>.FailureResponse("Associated user not found.");
+            throw new KeyNotFoundException("Associated user not found.");
         }
 
         // Update mutable fields if provided
-        if (request.FirstName.HasValue) { student.FirstName = request.FirstName.Value; user.FirstName = request.FirstName.Value; }
-        if (request.LastName.HasValue) { student.LastName = request.LastName.Value; user.LastName = request.LastName.Value; }
-        if (request.Email.HasValue && request.Email.Value != user.Email)
-        {
-            // Ensure unique email within tenant
-            if (await _userRepository.ExistsByEmailAndTenantIdAsync(request.Email.Value, tenantId))
-            {
-                throw new AlreadyExistException($"Email {request.Email.Value} is already registered.");
-            }
-            user.Email = request.Email.Value;
-        }
+        if (request.FirstName.HasValue && request.FirstName.Value != null) { student.FirstName = request.FirstName.Value; user.FirstName = request.FirstName.Value; }
+        if (request.LastName.HasValue && request.LastName.Value != null) { student.LastName = request.LastName.Value; user.LastName = request.LastName.Value; }
+        if (request.Email.HasValue) { user.Email = request.Email.Value; }
         if (request.DateOfBirth.HasValue) student.DateOfBirth = request.DateOfBirth.Value;
         if (request.Gender.HasValue) student.Gender = request.Gender.Value;
-        if (request.GuardianName.HasValue) student.GuardianName = request.GuardianName.Value;
-        if (request.GuardianPhone.HasValue) student.GuardianPhone = request.GuardianPhone.Value;
-        if (request.GuardianEmail.HasValue) student.GuardianEmail = request.GuardianEmail.Value;
-        if (request.MedicalNotes.HasValue) student.MedicalNotes = request.MedicalNotes.Value;
-        if (request.PhotoUrl.HasValue) student.PhotoUrl = request.PhotoUrl.Value;
+        if (request.GuardianName.HasValue && request.GuardianName.Value != null) student.GuardianName = request.GuardianName.Value;
+        if (request.GuardianPhone.HasValue && request.GuardianPhone.Value != null) student.GuardianPhone = request.GuardianPhone.Value;
+        if (request.GuardianEmail.HasValue && request.GuardianEmail.Value != null) student.GuardianEmail = request.GuardianEmail.Value;
+        if (request.MedicalNotes.HasValue && request.MedicalNotes.Value != null) student.MedicalNotes = request.MedicalNotes.Value;
+        if (request.PhotoUrl.HasValue && request.PhotoUrl.Value != null) student.PhotoUrl = request.PhotoUrl.Value;
 
         // Persist changes
         await _userRepository.UpdateUserAsync(user);
-        await _studentRepository.SaveChangesAsync();
 
         var response = new StudentResponse(
             student.Id,
@@ -160,29 +147,122 @@ public class StudentService : IStudentService
         return BaseResponse<StudentResponse>.SuccessResponse("Student enrolled successfully.", response);
     }
 
-    // Bulk enrollment for multiple students with per‑item error handling
+    // ✅ Bulk enrollment for students with partial success
+    //  the code takes all 1,000 students and puts them into one big group in the computer's memory.
+    // Then, it connects to the database exactly one time
     public async Task<BaseResponse<IReadOnlyList<BaseResponse<StudentResponse>>>> EnrollStudentsBulkAsync(IEnumerable<CreateStudentRequest> requests)
     {
-        var itemResults = new List<BaseResponse<StudentResponse>>();
-        foreach (var request in requests)
+        var tenantId = _currentTenant.Id;
+        if (tenantId == Guid.Empty) throw new UnauthorizedAccessException("Tenant ID not found for the current user.");
+
+        var requestList = requests.ToList();
+        if (!requestList.Any()) 
+            return BaseResponse<IReadOnlyList<BaseResponse<StudentResponse>>>.SuccessResponse("No students to enroll.", new List<BaseResponse<StudentResponse>>());
+
+        // 1. Make a list of request emails and fetch all emails that already exist in the database
+        var emails = requestList.Select(x => x.Email).Distinct().ToList();
+        var existingEmails = await _userRepository.GetExistingEmailsAsync(emails, tenantId);
+
+        // 2. Fetch sequence for student number
+        var tenant = await _tenantRepository.GetByIdAsync(tenantId);
+        if (tenant == null) throw new TenantNotFoundException("School identification not found.");
+
+        var year = DateTime.UtcNow.Year;
+        var prefix = $"{tenant.SchoolCode}/{year}/";
+        var lastCode = await _studentRepository.GetLastStudentNumberAsync(tenantId, prefix);
+
+        // logic for assigning the next student number
+        int nextSequence = 1;
+        if (lastCode != null)
         {
-            try
+            var parts = lastCode.Split('/');
+            if (parts.Length == 3 && int.TryParse(parts[2], out int lastSeq))
             {
-                var result = await CreateStudentAsync(request);
-                // if this method throws an error then obviously unit of work supposed to be thrown for this controller method 
-                // will not be executed for this specific request
-                itemResults.Add(result);
-            }
-            catch (Exception ex)
-            {
-                // the error thrown is wrapped as a failure response for this item
-                // Note: if we throw an error here again, it will travel up the call stack and nothing will be saved
-                var failure = BaseResponse<StudentResponse>.FailureResponse($"Bulk student enrollment failed: {ex.Message}");
-                itemResults.Add(failure);
+                nextSequence = lastSeq + 1;
             }
         }
+
+        var results = new List<BaseResponse<StudentResponse>>();
+        var usersToInsert = new List<User>();
+        var studentsToInsert = new List<Student>();
+
+        // incase there are duplicate emails in the request list itself, we create an empty box
+        // that checks and adds each email as they are processed and if there's a duplicate
+        // the error is recorded
+        var processedEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var request in requestList)
+        {
+            if (existingEmails.Contains(request.Email) || processedEmails.Contains(request.Email))
+            {
+                results.Add(BaseResponse<StudentResponse>.ErrorResponse($"Student with email '{request.Email}' already exists."));
+                continue;
+            }
+
+            var studentNumber = $"{prefix}{nextSequence:D6}";
+            nextSequence++;
+
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                Email = request.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                Roles = new List<UserRole> { UserRole.Student },
+                Status = UserStatus.Active,
+                IsEmailVerified = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var student = new Student
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                TenantId = tenantId,
+                ClassId = request.ClassId,
+                StudentNumber = studentNumber,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                DateOfBirth = request.DateOfBirth,
+                Gender = request.Gender,
+                GuardianName = request.GuardianName,
+                GuardianPhone = request.GuardianPhone,
+                GuardianEmail = request.GuardianEmail,
+                MedicalNotes = request.MedicalNotes,
+                PhotoUrl = request.PhotoUrl,
+                Status = StudentStatus.Active,
+                EnrolledAt = DateTime.UtcNow
+            };
+
+            usersToInsert.Add(user);
+            studentsToInsert.Add(student);
+            processedEmails.Add(request.Email);
+
+            var studentResponse = new StudentResponse(
+                student.Id, 
+                student.TenantId, 
+                student.FirstName, 
+                student.LastName, 
+                student.StudentNumber, 
+                student.DateOfBirth, 
+                student.Gender, 
+                student.GuardianName, 
+                student.GuardianPhone, 
+                student.GuardianEmail,  
+                student.PhotoUrl);
+            results.Add(BaseResponse<StudentResponse>.SuccessResponse("Student created successfully.", studentResponse));
+        }
+
+        if (usersToInsert.Any())
+        {
+            await _userRepository.AddUsersBulkAsync(usersToInsert);
+            await _studentRepository.AddStudentsBulkAsync(studentsToInsert);
+        }
+
         return BaseResponse<IReadOnlyList<BaseResponse<StudentResponse>>>.SuccessResponse(
-            "Bulk student enrollment completed.", itemResults);
+            "Bulk student enrollment completed.", results);
     }
     
 

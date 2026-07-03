@@ -3,10 +3,12 @@ namespace SchoolMaster.Application.Repositories;
 using SchoolMaster.Domain.Entities;
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 public interface IStudentRepository
 {
     Task AddStudentAsync(Student student);
+    Task AddStudentsBulkAsync(IEnumerable<Student> students);
     Task<bool> ExistsByStudentNumberAsync(string studentNumber, Guid tenantId);
     Task<string?> GetLastStudentNumberAsync(Guid tenantId, string prefix);
     Task<List<Student>> GetStudentsByClassIdAsync(Guid classId);

@@ -33,15 +33,13 @@ public class StaffController : ControllerBase
         return CreatedAtAction(nameof(CreateStaff), new { id = response.Data?.Id }, response);
     }
 
-[HttpPost("bulk")]
-[HasPermission(Permission.StaffManage)] // Bulk enrollment for admins
-public async Task<ActionResult<BaseResponse<IReadOnlyList<BaseResponse<StaffResponse>>>>> EnrollStaffBulk([FromBody] IEnumerable<CreateStaffRequest> requests)
-{
-    var response = await _staffService.EnrollStaffBulkAsync(requests);
-    return Ok(response);
-}
-
-
+    [HttpPost("bulk")]
+    [HasPermission(Permission.StaffManage)] // Bulk enrollment for admins
+    public async Task<ActionResult<BaseResponse<IReadOnlyList<BaseResponse<StaffResponse>>>>> EnrollStaffBulk([FromBody] IEnumerable<CreateStaffRequest> requests)
+    {
+        var response = await _staffService.EnrollStaffBulkAsync(requests);
+        return Ok(response);
+    }
 
     /// <summary>
     /// Resends the 7-day invitation email to a staff member.
@@ -51,6 +49,17 @@ public async Task<ActionResult<BaseResponse<IReadOnlyList<BaseResponse<StaffResp
     public async Task<ActionResult<BaseResponse<bool>>> ResendInvitation([FromBody] ResendOtpRequest request)
     {
         var response = await _staffService.ResendStaffInvitationAsync(request);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Updates an existing staff member.
+    /// </summary>
+    [HttpPut]
+    [HasPermission(Permission.StaffUpdate)]
+    public async Task<ActionResult<BaseResponse<StaffResponse>>> UpdateStaff([FromBody] UpdateStaffRequest request)
+    {
+        var response = await _staffService.UpdateStaffAsync(request);
         return Ok(response);
     }
 }
