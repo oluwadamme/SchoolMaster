@@ -86,6 +86,7 @@ try
     {
         cfg.RegisterServicesFromAssemblyContaining<Program>();
         cfg.RegisterServicesFromAssemblyContaining<StudentMarkedAbsentEventHandler>();
+        cfg.RegisterServicesFromAssemblyContaining<OtpVerificationEventHandler>();
     });
 
     // Attendance
@@ -93,7 +94,7 @@ try
     builder.Services.AddScoped<IAttendanceService, AttendanceService>();
     builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
     builder.Services.AddScoped<IStudentRepository, StudentRepository>();
-    builder.Services.AddScoped<IAbsenceNotificationJob, AbsenceNotificationJob>();
+    builder.Services.AddScoped<INotificationJob, NotificationJob>();
 
 
 
@@ -167,9 +168,9 @@ try
 
     // Swap job scheduler for a no-op in tests — no Hangfire server or storage needed
     if (!isTesting)
-        builder.Services.AddScoped<IAttendanceJobScheduler, HangfireAttendanceJobScheduler>();
+        builder.Services.AddScoped<IJobScheduler, HangfireJobScheduler>();
     else
-        builder.Services.AddScoped<IAttendanceJobScheduler, NoOpAttendanceJobScheduler>();
+        builder.Services.AddScoped<IJobScheduler, NoOpAttendanceJobScheduler>();
 
     // Skip real Hangfire and server in testing environment
     if (!isTesting)

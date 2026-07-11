@@ -40,3 +40,20 @@ public class CreateStaffRequestValidator : AbstractValidator<CreateStaffRequest>
             .NotEmpty().WithMessage("Department is required.");
     }
 }
+
+
+public record BulkEnrollStaffRequest(IReadOnlyList<CreateStaffRequest> Staff);
+
+public class BulkEnrollStaffRequestValidator : AbstractValidator<BulkEnrollStaffRequest>
+{
+    private const int MaxBatchSize = 500;
+    public BulkEnrollStaffRequestValidator()
+    {
+        RuleFor(x => x.Staff)
+            .NotEmpty().WithMessage("At least one staff record is required.")
+            .Must(s => s.Count <= MaxBatchSize)
+            .WithMessage($"A single import cannot exceed {MaxBatchSize} records.");
+        RuleForEach(x => x.Staff).SetValidator(new CreateStaffRequestValidator());
+    }
+}
+

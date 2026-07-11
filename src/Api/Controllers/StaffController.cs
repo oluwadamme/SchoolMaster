@@ -35,7 +35,7 @@ public class StaffController : ControllerBase
 
     [HttpPost("bulk")]
     [HasPermission(Permission.StaffManage)] // Bulk enrollment for admins
-    public async Task<ActionResult<BaseResponse<IReadOnlyList<BaseResponse<StaffResponse>>>>> EnrollStaffBulk([FromBody] IEnumerable<CreateStaffRequest> requests)
+    public async Task<ActionResult<BaseResponse<IReadOnlyList<BaseResponse<StaffResponse>>>>> EnrollStaffBulk([FromBody] BulkEnrollStaffRequest requests)
     {
         var response = await _staffService.EnrollStaffBulkAsync(requests);
         return Ok(response);

@@ -30,5 +30,16 @@ public class CreateStudentRequestValidator : AbstractValidator<CreateStudentRequ
         RuleFor(x => x.GuardianName).NotEmpty().WithMessage("Guardian name is required.");
         RuleFor(x => x.GuardianPhone).NotEmpty().WithMessage("Guardian phone is required.");
         RuleFor(x => x.GuardianEmail).NotEmpty().WithMessage("Guardian email is required.");
+        RuleFor(x => x.ClassId).NotEmpty().WithMessage("Class ID is required.");
+    }
+}
+
+public record BulkEnrollStudentsRequest(IReadOnlyList<CreateStudentRequest> Students);
+
+public class BulkEnrollStudentsRequestValidator : AbstractValidator<BulkEnrollStudentsRequest>
+{
+    public BulkEnrollStudentsRequestValidator()
+    {
+        RuleForEach(x => x.Students).SetValidator(new CreateStudentRequestValidator());
     }
 }

@@ -3,10 +3,10 @@ using SchoolMaster.Application.Services.Interfaces;
 
 namespace SchoolMaster.Infrastructure.Jobs;
 
-public class AbsenceNotificationJob(
+public class NotificationJob(
     IStudentRepository studentRepo,
     ITenantRepository tenantRepo,
-    IEmailService emailService) : IAbsenceNotificationJob
+    IEmailService emailService) : INotificationJob
 {
     public async Task SendAsync(Guid tenantId, Guid studentId, DateOnly date)
     {
@@ -36,5 +36,25 @@ public class AbsenceNotificationJob(
             """;
 
         await emailService.SendEmailAsync(student.GuardianEmail, student.GuardianName, subject, body);
+    }
+
+    public async Task SendOtpVerificationAsync(Guid tenantId, string userEmail, string userName, string otpCode)
+    {
+        var tenant = await tenantRepo.GetByIdAsync(tenantId);
+        var schoolName = tenant?.Name ?? "SchoolMaster";
+
+        var subject = "OTP Verification Code";
+        var body = $"""
+            Dear {userName},
+
+            Your OTP verification code is: {otpCode}
+
+            Please use this code to complete your verification process.
+
+            Regards,
+            {schoolName}
+            """;
+
+        await emailService.SendEmailAsync(userEmail, userName, subject, body);
     }
 }
