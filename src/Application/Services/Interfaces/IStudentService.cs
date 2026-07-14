@@ -6,7 +6,8 @@ namespace SchoolMaster.Application.Services.Interfaces;
 
 public interface IStudentService
 {
+    Task<BaseResponse<PagedResponse<StudentResponse>>> GetAllStudentsAsync(int page, int pageSize);
     Task<BaseResponse<StudentResponse>> CreateStudentAsync(CreateStudentRequest request);
     Task<BaseResponse<StudentResponse>> UpdateStudentAsync(UpdateStudentRequest request);
-    Task<BaseResponse<IReadOnlyList<StudentResponse>>> EnrollStudentsBulkAsync(BulkEnrollStudentsRequest requests);
+    Task<BaseResponse<BulkEnrollmentResult>> EnrollStudentsBulkAsync(BulkEnrollStudentsRequest requests);
 }

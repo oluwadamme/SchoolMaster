@@ -11,7 +11,8 @@ public record UpdateStudentRequest(
     Optional<string> Email = default,
     Optional<DateOnly> DateOfBirth = default,
     Optional<Gender> Gender = default,
-    Optional<string> GuardianName = default,
+    Optional<string> GuardianFirstName = default,
+    Optional<string> GuardianLastName = default,
     Optional<string> GuardianPhone = default,
     Optional<string> GuardianEmail = default,
     Optional<string> MedicalNotes = default,
@@ -37,8 +38,11 @@ public class UpdateStudentRequestValidator : AbstractValidator<UpdateStudentRequ
                 .LessThan(DateOnly.FromDateTime(DateTime.UtcNow))
                 .WithMessage("Date of birth cannot be in the future.");
         });
-        When(x => x.GuardianName.HasValue && x.GuardianName.Value != null, () => {
-            RuleFor(x => x.GuardianName.Value!).MinimumLength(2).WithMessage("Guardian name must be at least 2 characters.");
+        When(x => x.GuardianFirstName.HasValue && x.GuardianFirstName.Value != null, () => {
+            RuleFor(x => x.GuardianFirstName.Value!).MinimumLength(2).WithMessage("Guardian first name must be at least 2 characters.");
+        });
+        When(x => x.GuardianLastName.HasValue && x.GuardianLastName.Value != null, () => {
+            RuleFor(x => x.GuardianLastName.Value!).MinimumLength(2).WithMessage("Guardian last name must be at least 2 characters.");
         });
         When(x => x.GuardianPhone.HasValue && x.GuardianPhone.Value != null, () => {
             RuleFor(x => x.GuardianPhone.Value!).NotEmpty().WithMessage("Guardian phone is required.");

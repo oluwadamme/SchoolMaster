@@ -10,4 +10,5 @@ public interface IStaffService
     Task<BaseResponse<bool>> ResendStaffInvitationAsync(ResendOtpRequest request);
     Task<BaseResponse<StaffResponse>> UpdateStaffAsync(UpdateStaffRequest request);
     Task<BaseResponse<BulkEnrollmentResult>> EnrollStaffBulkAsync(BulkEnrollStaffRequest requests);
+    Task<BaseResponse<PagedResponse<StaffResponse>>> GetAllStaffAsync(int page, int pageSize);
 }

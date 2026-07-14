@@ -109,6 +109,20 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
             .HasForeignKey<Staff>(s => s.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // User ← Guardian (one-to-one)
+        modelBuilder.Entity<Guardian>()
+            .HasOne(g => g.User)
+            .WithOne()
+            .HasForeignKey<Guardian>(g => g.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Guardian → Students (one-to-many)
+        modelBuilder.Entity<Student>()
+            .HasOne(s => s.Guardian)
+            .WithMany(g => g.Students)
+            .HasForeignKey(s => s.GuardianId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Tenant ← User (one-to-many: a tenant has many users)
         modelBuilder.Entity<User>()
             .HasOne<Tenant>()
@@ -160,6 +174,9 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
 
         modelBuilder.Entity<Student>()
         .HasQueryFilter(s => s.TenantId == _currentTenant.Id);
+
+        modelBuilder.Entity<Guardian>()
+            .HasQueryFilter(g => g.TenantId == _currentTenant.Id);
 
         modelBuilder.Entity<User>()
             .HasQueryFilter(s => s.TenantId == _currentTenant.Id);
@@ -275,6 +292,7 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
 
     public DbSet<User> Users { get; set; }
     public DbSet<Student> Students { get; set; }
+    public DbSet<Guardian> Guardians { get; set; }
     public DbSet<Staff> Staff { get; set; }
     public DbSet<Tenant> Tenants { get; set; }
     public DbSet<AcademicYear> AcademicYears { get; set; }
@@ -284,4 +302,5 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
     public DbSet<Period> Periods { get; set; }
     public DbSet<DailyAttendance> DailyAttendances { get; set; }
     public DbSet<TenantNumberSequence> TenantNumberSequences { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; }
 }

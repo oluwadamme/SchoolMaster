@@ -11,7 +11,7 @@ public interface IStaffRepository
     Task AddStaffBulkAsync(IEnumerable<Staff> staff);
     Task<Staff?> GetStaffByIdAsync(Guid staffId);
     Task<Staff?> GetStaffByIdIgnoringFiltersAsync(Guid staffId, Guid tenantId);
-    Task<IReadOnlyList<Staff>> GetAllStaffAsync(Guid tenantId);
+    Task<(List<Staff> Items, int TotalCount)> GetAllStaffAsync(Guid tenantId, int page, int pageSize);
     Task<bool> ExistsByStaffNumberAsync(string staffNumber, Guid tenantId);
     Task<string?> GetLastStaffNumberAsync(Guid tenantId, string prefix);
 }

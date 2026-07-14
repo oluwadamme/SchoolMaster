@@ -50,10 +50,20 @@ public class StaffRepository : IStaffRepository
             .FirstOrDefaultAsync(s => s.Id == staffId && s.TenantId == tenantId);
     }
 
-    public async Task<IReadOnlyList<Staff>> GetAllStaffAsync(Guid tenantId)
+    public async Task<(List<Staff> Items, int TotalCount)> GetAllStaffAsync(Guid tenantId, int page, int pageSize)
     {
-        return await _context.Staff
-            .Where(s => s.TenantId == tenantId)
+        var query = _context.Staff
+            .AsNoTracking()
+            .Where(s => s.TenantId == tenantId);
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(s => s.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        return (items, totalCount);
     }
 }

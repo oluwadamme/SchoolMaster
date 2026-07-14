@@ -46,9 +46,9 @@ public class StaffController : ControllerBase
     /// </summary>
     [HttpGet]
     [HasPermission(Permission.StaffManage)]
-    public async Task<ActionResult<BaseResponse<IReadOnlyList<StaffResponse>>>> GetAllStaff()
+    public async Task<ActionResult<BaseResponse<PagedResponse<StaffResponse>>>> GetAllStaff([FromQuery] PaginationRequest pagination)
     {
-        var response = await _staffService.GetAllStaffAsync();
+        var response = await _staffService.GetAllStaffAsync(pagination.Page, pagination.PageSize);
         return Ok(response);
     }
 

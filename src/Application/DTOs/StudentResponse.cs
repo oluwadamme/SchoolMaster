@@ -11,7 +11,8 @@ public record StudentResponse(
     string StudentNumber,
     DateOnly DateOfBirth,
     Gender Gender,
-    string GuardianName,
+    string GuardianFirstName,
+    string GuardianLastName,
     string GuardianPhone,
     string GuardianEmail,
     string? PhotoUrl

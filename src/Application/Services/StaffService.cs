@@ -171,6 +171,7 @@ public class StaffService : IStaffService
     // Then, it connects to the database exactly one time
     public async Task<BaseResponse<BulkEnrollmentResult>> EnrollStaffBulkAsync(BulkEnrollStaffRequest requests)
     {
+
         var tenantId = _currentTenant.Id;
         var requestList = requests.Staff.ToList();
         var tenant = await _tenantRepository.GetByIdAsync(tenantId);
@@ -182,6 +183,7 @@ public class StaffService : IStaffService
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var accepted = new List<(int Row, CreateStaffRequest Req)>();
         var failures = new List<BulkEnrollmentFailure>();
+
 
         for (var i = 0; i < requestList.Count; i++)
         {
@@ -248,11 +250,11 @@ public class StaffService : IStaffService
             "Bulk staff enrollment completed.", results);
     }
 
-    public async Task<BaseResponse<IReadOnlyList<StaffResponse>>> GetAllStaffAsync()
+    public async Task<BaseResponse<PagedResponse<StaffResponse>>> GetAllStaffAsync(int page, int pageSize)
     {
         var tenantId = _currentTenant.Id;
         
-        var staffList = await _staffRepository.GetAllStaffAsync(tenantId);
+        var (staffList, totalCount) = await _staffRepository.GetAllStaffAsync(tenantId, page, pageSize);
         
         var responseList = staffList.Select(staff => new StaffResponse(
             staff.Id,
@@ -266,7 +268,9 @@ public class StaffService : IStaffService
             staff.EmploymentType
         )).ToList();
 
-        return BaseResponse<IReadOnlyList<StaffResponse>>.SuccessResponse("Staff retrieved successfully.", responseList);
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        var pagedResponse = new PagedResponse<StaffResponse>(responseList, totalCount, totalPages, page, pageSize);
+        return BaseResponse<PagedResponse<StaffResponse>>.SuccessResponse("Staff retrieved successfully.", pagedResponse);
     }
 
     public async Task<BaseResponse<bool>> ResendStaffInvitationAsync(ResendOtpRequest request)

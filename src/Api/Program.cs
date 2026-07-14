@@ -69,6 +69,8 @@ try
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IStaffRepository, StaffRepository>(); // Register the StaffRepository
     builder.Services.AddScoped<IStudentRepository, StudentRepository>(); // Register the StudentRepository
+    builder.Services.AddScoped<IGuardianRepository, GuardianRepository>();
+    builder.Services.AddScoped<ITenantSequenceRepository, TenantSequenceRepository>();
     builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>(); // Register the AuditLogRepository
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IAuthService, AuthService>();

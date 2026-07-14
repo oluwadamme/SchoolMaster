@@ -38,6 +38,17 @@ public class StudentsController : ControllerBase
     }
 
     /// <summary>
+    /// Retrieves all students for the current tenant.
+    /// </summary>
+    [HttpGet]
+    [HasPermission(Permission.AcademicManage)] // Or whatever permission fits Students view
+    public async Task<ActionResult<BaseResponse<PagedResponse<StudentResponse>>>> GetAllStudents([FromQuery] PaginationRequest pagination)
+    {
+        var response = await _studentService.GetAllStudentsAsync(pagination.Page, pagination.PageSize);
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Updates an existing student.
     /// </summary>
     [HttpPut]

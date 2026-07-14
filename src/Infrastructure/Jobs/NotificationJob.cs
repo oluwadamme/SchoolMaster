@@ -24,8 +24,9 @@ public class NotificationJob(
         var schoolName = tenant?.Name ?? "SchoolMaster";
 
         var subject = $"Absence Notification — {date:MMMM d, yyyy}";
+        var guardianName = $"{student.Guardian?.FirstName} {student.Guardian?.LastName}";
         var body = $"""
-            Dear {student.GuardianName},
+            Dear {guardianName},
 
             This is to inform you that {student.FirstName} {student.LastName} was marked absent on {date:MMMM d, yyyy}.
 
@@ -35,7 +36,7 @@ public class NotificationJob(
             {schoolName}
             """;
 
-        await emailService.SendEmailAsync(student.GuardianEmail, student.GuardianName, subject, body);
+        await emailService.SendEmailAsync(student.Guardian?.Email ?? "", guardianName, subject, body);
     }
 
     public async Task SendOtpVerificationAsync(Guid tenantId, string userEmail, string userName, string otpCode)

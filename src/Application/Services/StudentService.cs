@@ -15,26 +15,29 @@ public class StudentService : IStudentService
 {
     private readonly IUserRepository _userRepository;
     private readonly IStudentRepository _studentRepository;
+    private readonly IGuardianRepository _guardianRepository;
     private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
 
     public StudentService(
         IUserRepository userRepository, 
         IStudentRepository studentRepository, 
+        IGuardianRepository guardianRepository,
         ITenantRepository tenantRepository,
         ICurrentTenant currentTenant)
     {
         _userRepository = userRepository;
         _studentRepository = studentRepository;
+        _guardianRepository = guardianRepository;
         _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
     }
 
-    public async Task<BaseResponse<IReadOnlyList<StudentResponse>>> GetAllStudentsAsync()
+    public async Task<BaseResponse<PagedResponse<StudentResponse>>> GetAllStudentsAsync(int page, int pageSize)
     {
         var tenantId = _currentTenant.Id;
         
-        var studentList = await _studentRepository.GetAllStudentsAsync(tenantId);
+        var (studentList, totalCount) = await _studentRepository.GetAllStudentsAsync(tenantId, page, pageSize);
         
         var responseList = studentList.Select(student => new StudentResponse(
             student.Id,
@@ -44,13 +47,16 @@ public class StudentService : IStudentService
             student.StudentNumber,
             student.DateOfBirth,
             student.Gender,
-            student.GuardianName,
-            student.GuardianPhone,
-            student.GuardianEmail,
+            student.Guardian?.FirstName ?? "",
+            student.Guardian?.LastName ?? "",
+            student.Guardian?.Phone ?? "",
+            student.Guardian?.Email ?? "",
             student.PhotoUrl
         )).ToList();
 
-        return BaseResponse<IReadOnlyList<StudentResponse>>.SuccessResponse("Students retrieved successfully.", responseList);
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        var pagedResponse = new PagedResponse<StudentResponse>(responseList, totalCount, totalPages, page, pageSize);
+        return BaseResponse<PagedResponse<StudentResponse>>.SuccessResponse("Students retrieved successfully.", pagedResponse);
     }
 
     // Update student and associated user
@@ -78,9 +84,10 @@ public class StudentService : IStudentService
         if (request.Email.HasValue && request.Email.Value != null) { user.Email = request.Email.Value; }
         if (request.DateOfBirth.HasValue) student.DateOfBirth = request.DateOfBirth.Value;
         if (request.Gender.HasValue) student.Gender = request.Gender.Value;
-        if (request.GuardianName.HasValue && request.GuardianName.Value != null) student.GuardianName = request.GuardianName.Value;
-        if (request.GuardianPhone.HasValue && request.GuardianPhone.Value != null) student.GuardianPhone = request.GuardianPhone.Value;
-        if (request.GuardianEmail.HasValue && request.GuardianEmail.Value != null) student.GuardianEmail = request.GuardianEmail.Value;
+        if (request.GuardianFirstName.HasValue && request.GuardianFirstName.Value != null) student.Guardian.FirstName = request.GuardianFirstName.Value;
+        if (request.GuardianLastName.HasValue && request.GuardianLastName.Value != null) student.Guardian.LastName = request.GuardianLastName.Value;
+        if (request.GuardianPhone.HasValue && request.GuardianPhone.Value != null) student.Guardian.Phone = request.GuardianPhone.Value;
+        if (request.GuardianEmail.HasValue && request.GuardianEmail.Value != null) student.Guardian.Email = request.GuardianEmail.Value;
         if (request.MedicalNotes.HasValue && request.MedicalNotes.Value != null) student.MedicalNotes = request.MedicalNotes.Value;
         if (request.PhotoUrl.HasValue && request.PhotoUrl.Value != null) student.PhotoUrl = request.PhotoUrl.Value;
 
@@ -95,9 +102,10 @@ public class StudentService : IStudentService
             student.StudentNumber,
             student.DateOfBirth,
             student.Gender,
-            student.GuardianName,
-            student.GuardianPhone,
-            student.GuardianEmail,
+            student.Guardian?.FirstName ?? "",
+            student.Guardian?.LastName ?? "",
+            student.Guardian?.Phone ?? "",
+            student.Guardian?.Email ?? "",
             student.PhotoUrl);
 
         return BaseResponse<StudentResponse>.SuccessResponse("Student updated successfully.", response);
@@ -112,9 +120,13 @@ public class StudentService : IStudentService
             throw new AlreadyExistException($"Email {request.Email} is already registered.");
         }
 
-        (User user, Student student) = await CreateStudentAndUserObject(request, tenantId);
-        await _studentRepository.AddStudentAsync(student);
+        var (user, student, newGuardian, newGuardianUser) = await CreateStudentAndUserObject(request, tenantId);
+        
+        if (newGuardianUser != null) await _userRepository.AddUserAsync(newGuardianUser);
+        if (newGuardian != null) await _guardianRepository.AddGuardianAsync(newGuardian);
+        
         await _userRepository.AddUserAsync(user);
+        await _studentRepository.AddStudentAsync(student);
 
 
         var response = new StudentResponse(
@@ -125,17 +137,55 @@ public class StudentService : IStudentService
             student.StudentNumber,
             student.DateOfBirth,
             student.Gender,
-            student.GuardianName,
-            student.GuardianPhone,
-            student.GuardianEmail,
+            student.Guardian?.FirstName ?? "",
+            student.Guardian?.LastName ?? "",
+            student.Guardian?.Phone ?? "",
+            student.Guardian?.Email ?? "",
             student.PhotoUrl
         );
 
         return BaseResponse<StudentResponse>.SuccessResponse("Student enrolled successfully.", response);
     }
 
-    private async Task<(User user, Student student)> CreateStudentAndUserObject(CreateStudentRequest request, Guid tenantId)
+    private async Task<(User user, Student student, Guardian? newGuardian, User? newGuardianUser)> CreateStudentAndUserObject(CreateStudentRequest request, Guid tenantId)
     {
+        // 1. Check if guardian exists by email
+        var existingGuardian = await _guardianRepository.GetGuardianByEmailAsync(request.GuardianEmail, tenantId);
+        
+        Guardian guardianToLink;
+        Guardian? newGuardian = null;
+        User? newGuardianUser = null;
+
+        if (existingGuardian != null)
+        {
+            guardianToLink = existingGuardian;
+        }
+        else
+        {
+            // Create a User for the new Guardian
+            newGuardianUser = User.Create(
+                tenantId: tenantId,
+                status: UserStatus.Active,
+                roles: new List<UserRole> { UserRole.Parent },
+                firstName: request.GuardianFirstName,
+                lastName: request.GuardianLastName,
+                email: request.GuardianEmail,
+                passwordHash: BCrypt.Net.BCrypt.HashPassword("DefaultPassword123!") // Needs to be generated or handled better
+            );
+
+            newGuardian = new Guardian
+            {
+                Id = Guid.NewGuid(),
+                UserId = newGuardianUser.Id,
+                TenantId = tenantId,
+                FirstName = request.GuardianFirstName,
+                LastName = request.GuardianLastName,
+                Phone = request.GuardianPhone,
+                Email = request.GuardianEmail
+            };
+            guardianToLink = newGuardian;
+        }
+
         // Generate Permanent ID: GHA/2024/0001
         var studentNumber = await GeneratePermanentStudentNumber(tenantId);
 
@@ -160,111 +210,153 @@ public class StudentService : IStudentService
             LastName = request.LastName,
             DateOfBirth = request.DateOfBirth,
             Gender = request.Gender,
-            GuardianName = request.GuardianName,
-            GuardianPhone = request.GuardianPhone,
-            GuardianEmail = request.GuardianEmail,
+            GuardianId = guardianToLink.Id,
+            Guardian = guardianToLink, // Link it here
             MedicalNotes = request.MedicalNotes,
             PhotoUrl = request.PhotoUrl,
             Status = StudentStatus.Active,
             EnrolledAt = DateTime.UtcNow
         };
-        return (user, student);
+        
+        return (user, student, newGuardian, newGuardianUser);
     }
 
     // ✅ Bulk enrollment for students with partial success
     //  the code takes all 1,000 students and puts them into one big group in the computer's memory.
     // Then, it connects to the database exactly one time
-    public async Task<BaseResponse<IReadOnlyList<StudentResponse>>> EnrollStudentsBulkAsync(BulkEnrollStudentsRequest requests)
+    public async Task<BaseResponse<BulkEnrollmentResult>> EnrollStudentsBulkAsync(BulkEnrollStudentsRequest requests)
     {
         var tenantId = _currentTenant.Id;
-
         var requestList = requests.Students.ToList();
-        if (!requestList.Any())
-            return BaseResponse<IReadOnlyList<StudentResponse>>.SuccessResponse("No students to enroll.", new List<StudentResponse>());
-
-        // 1. Make a list of request emails and fetch all emails that already exist in the database
-        var emails = requestList.Select(x => x.Email).Distinct().ToList();
-        var existingEmails = await _userRepository.GetExistingEmailsAsync(emails, tenantId);
-
-        // 2. Fetch sequence for student number
         var tenant = await _tenantRepository.GetByIdAsync(tenantId);
         if (tenant == null) throw new TenantNotFoundException("School identification not found.");
 
-        var year = DateTime.UtcNow.Year;
-        var prefix = $"{tenant.SchoolCode}/{year}/";
-        var lastCode = await _studentRepository.GetLastStudentNumberAsync(tenantId, prefix);
+        // 1. Make a list of request student numbers and fetch all student numbers that already exist in the database
+        var studentNumbers = requestList.Select(x => x.StudentNumber.Trim()).Distinct().ToList();
+        var existingStudentNumbers = await _studentRepository.GetExistingStudentNumbersAsync(studentNumbers, tenantId);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var accepted = new List<(int Row, BulkEnrollStudentItemRequest Req)>();
+        var failures = new List<BulkEnrollmentFailure>();
 
-        // logic for assigning the next student number
-        int nextSequence = 1;
-        if (lastCode != null)
+        for (var i = 0; i < requestList.Count; i++)
         {
-            var parts = lastCode.Split('/');
-            if (parts.Length == 3 && int.TryParse(parts[2], out int lastSeq))
+            var studentNumber = requestList[i].StudentNumber.Trim();
+            if (existingStudentNumbers.Contains(studentNumber) || !seen.Add(studentNumber))
             {
-                nextSequence = lastSeq + 1;
-            }
-        }
-
-        var results = new List<StudentResponse>();
-        var usersToInsert = new List<User>();
-        var studentsToInsert = new List<Student>();
-
-        // incase there are duplicate emails in the request list itself, we create an empty box
-        // that checks and adds each email as they are processed and if there's a duplicate
-        // the error is recorded
-        var processedEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var request in requestList)
-        {
-            if (existingEmails.Contains(request.Email) || processedEmails.Contains(request.Email))
-            {
-                results.Add(new StudentResponse(
-                    Guid.Empty,
-                    tenantId,
-                    request.FirstName,
-                    request.LastName,
-                    "N/A",
-                    DateOnly.MinValue,
-                    request.Gender,
-                    request.GuardianName,
-                    request.GuardianPhone,
-                    request.GuardianEmail,
-                    request.PhotoUrl
-                ));
+                failures.Add(new BulkEnrollmentFailure(i + 1, requestList[i].StudentNumber, "Student number already exists."));
                 continue;
             }
-
-            var studentNumber = $"{prefix}{nextSequence:D6}";
-            nextSequence++;
-            var (user, student) = await CreateStudentAndUserObject(request, tenantId); // Create student in bulk mode
-
-            usersToInsert.Add(user);
-            studentsToInsert.Add(student);
-            processedEmails.Add(request.Email);
-
-            var studentResponse = new StudentResponse(
-                student.Id,
-                student.TenantId,
-                student.FirstName,
-                student.LastName,
-                student.StudentNumber,
-                student.DateOfBirth,
-                student.Gender,
-                student.GuardianName,
-                student.GuardianPhone,
-                student.GuardianEmail,
-                student.PhotoUrl
-                );
-            results.Add(studentResponse);
+            accepted.Add((i + 1, requestList[i]));
         }
 
-        if (usersToInsert.Any())
+        if (accepted.Count > 0)
         {
+            var usersToInsert = new List<User>();
+            var studentsToInsert = new List<Student>();
+            var guardiansToInsert = new List<Guardian>();
+            var guardianUsersToInsert = new List<User>();
+
+            // Fetch existing guardians by email for the accepted students
+            var guardianEmails = accepted.Select(x => x.Req.GuardianEmail.Trim().ToLowerInvariant()).Distinct().ToList();
+            var existingGuardiansList = await _guardianRepository.GetGuardiansByEmailsAsync(guardianEmails, tenantId);
+            var existingGuardians = existingGuardiansList.ToDictionary(g => g.Email.ToLowerInvariant());
+
+            // Track new guardians created in this batch to avoid duplicates
+            var newGuardiansCache = new Dictionary<string, Guardian>(StringComparer.OrdinalIgnoreCase);
+
+            for (var i = 0; i < accepted.Count; i++)
+            {
+                var req = accepted[i].Req;
+                var normalizedGuardianEmail = req.GuardianEmail.Trim().ToLowerInvariant();
+
+                Guardian guardianToLink;
+                if (existingGuardians.TryGetValue(normalizedGuardianEmail, out var existingG))
+                {
+                    guardianToLink = existingG;
+                }
+                else if (newGuardiansCache.TryGetValue(normalizedGuardianEmail, out var cachedG))
+                {
+                    guardianToLink = cachedG;
+                }
+                else
+                {
+                    // Create new Guardian and User for Guardian
+                    var newGuardianUser = User.Create(
+                        tenantId: tenantId,
+                        status: UserStatus.Active,
+                        roles: new List<UserRole> { UserRole.Parent },
+                        firstName: req.GuardianFirstName,
+                        lastName: req.GuardianLastName,
+                        email: req.GuardianEmail,
+                        passwordHash: BCrypt.Net.BCrypt.HashPassword("DefaultPassword123!") // Or another strategy
+                    );
+
+                    var newGuardian = new Guardian
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = newGuardianUser.Id,
+                        TenantId = tenantId,
+                        FirstName = req.GuardianFirstName,
+                        LastName = req.GuardianLastName,
+                        Phone = req.GuardianPhone,
+                        Email = req.GuardianEmail
+                    };
+
+                    guardianUsersToInsert.Add(newGuardianUser);
+                    guardiansToInsert.Add(newGuardian);
+                    newGuardiansCache[normalizedGuardianEmail] = newGuardian;
+                    guardianToLink = newGuardian;
+                }
+
+                var user = User.Create(
+                    tenantId: tenantId,
+                    status: UserStatus.Active,
+                    roles: new List<UserRole> { UserRole.Student },
+                    firstName: req.FirstName,
+                    lastName: req.LastName,
+                    email: req.Email,
+                    passwordHash: BCrypt.Net.BCrypt.HashPassword(req.Password)
+                );
+
+                var student = new Student
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    TenantId = tenantId,
+                    ClassId = req.ClassId,
+                    StudentNumber = req.StudentNumber,
+                    FirstName = req.FirstName,
+                    LastName = req.LastName,
+                    DateOfBirth = req.DateOfBirth,
+                    Gender = req.Gender,
+                    GuardianId = guardianToLink.Id,
+                    Guardian = guardianToLink,
+                    MedicalNotes = req.MedicalNotes,
+                    PhotoUrl = req.PhotoUrl,
+                    Status = StudentStatus.Active,
+                    EnrolledAt = DateTime.UtcNow
+                };
+
+                usersToInsert.Add(user);
+                studentsToInsert.Add(student);
+            }
+
+            if (guardianUsersToInsert.Any()) await _userRepository.AddUsersBulkAsync(guardianUsersToInsert);
+            if (guardiansToInsert.Any()) await _guardianRepository.AddGuardiansBulkAsync(guardiansToInsert);
+            
             await _userRepository.AddUsersBulkAsync(usersToInsert);
             await _studentRepository.AddStudentsBulkAsync(studentsToInsert);
         }
 
-        return BaseResponse<IReadOnlyList<StudentResponse>>.SuccessResponse(
+        var results = new BulkEnrollmentResult
+        (
+            requestList.Count,
+            accepted.Count,
+            failures.Count,
+            failures
+        );
+
+        return BaseResponse<BulkEnrollmentResult>.SuccessResponse(
             "Bulk student enrollment completed.", results);
     }
     
