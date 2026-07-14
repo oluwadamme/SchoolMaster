@@ -4,7 +4,7 @@ using SchoolMaster.Domain.Events;
 
 namespace SchoolMaster.Infrastructure.EventHandlers;
 
-public class StudentMarkedAbsentEventHandler(IAttendanceJobScheduler scheduler)
+public class StudentMarkedAbsentEventHandler(IJobScheduler scheduler)
     : INotificationHandler<StudentMarkedAbsentEvent>
     // : INotificationHandler<StudentMarkedAbsentEvent> Tells MediatR that this class can handle events of type
     // StudentMarkedAbsentEvent. MediatR will call the Handle method whenever such an event is published.

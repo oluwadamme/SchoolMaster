@@ -31,7 +31,7 @@ public class StudentsController : ControllerBase
     [HttpPost("bulk")]
     [HasPermission(Permission.StudentsCreate)] // Bulk enrollment for admins
     // IEnumerable<T> is a .NET interface that represents any read‑only collection of items of type T
-    public async Task<ActionResult<BaseResponse<IReadOnlyList<StudentResponse>>>> EnrollStudentsBulk([FromBody] IEnumerable<CreateStudentRequest> requests)
+    public async Task<ActionResult<BaseResponse<IReadOnlyList<StudentResponse>>>> EnrollStudentsBulk([FromBody] BulkEnrollStudentsRequest requests)
     {
         var response = await _studentService.EnrollStudentsBulkAsync(requests);
         return Ok(response);

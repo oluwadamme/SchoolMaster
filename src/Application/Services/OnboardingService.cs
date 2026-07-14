@@ -78,31 +78,19 @@ public class OnboardingService : IOnboardingService
 
 
         // 3. Create Admin User (linked to tenant)
-        var adminUser = new User
-        {
-            Id = Guid.NewGuid(),
-            TenantId = tenant.Id,
-            FirstName = request.AdminFirstName,
-            LastName = request.AdminLastName,
-            Email = request.AdminEmail,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.AdminPassword),
-            Roles = new List<UserRole> { UserRole.Admin },
-            Status = UserStatus.PendingVerification,
-            IsEmailVerified = false,
-            OtpToken = otp,
-            OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+        var adminUser = User.Create(
+            tenantId: tenant.Id,
+            status: UserStatus.PendingVerification,
+            roles: new List<UserRole> { UserRole.Admin },
+            firstName: request.AdminFirstName,
+            lastName: request.AdminLastName,
+            email: request.AdminEmail,
+            passwordHash: BCrypt.Net.BCrypt.HashPassword(request.AdminPassword),
+            otpToken: otp,
+            otpExpiry: DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes)
+        );
 
         await _userRepository.AddUserAsync(adminUser);
-        // 4. Send email verification otp
-        // adds email service job to the queue
-
-
-        _backgroundJobClient.Enqueue<IEmailService>(x =>
-        x.SendEmailAsync(request.AdminEmail, request.AdminFirstName, subject, body));
-
         // 5. Return tenantId
         return BaseResponse<Guid>.SuccessResponse(
             "Tenant and Admin created successfully",

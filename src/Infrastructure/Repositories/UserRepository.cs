@@ -69,8 +69,8 @@ public class UserRepository : IUserRepository
     {
         // Tenant scoping comes from the global query filter (_currentTenant.Id); the explicit
         // tenantId parameter is retained for the existing staff-invitation call sites.
-        return await _context.Users
-            .FirstOrDefaultAsync(x => x.Email == email);
+        return await _context.Users.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Email == email && x.TenantId == tenantId);
     }
 
     public async Task<User?> GetUserByIdAsync(Guid userId, Guid tenantId)

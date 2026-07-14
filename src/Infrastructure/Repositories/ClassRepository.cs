@@ -39,6 +39,11 @@ public class ClassRepository : IClassRepository
         return await _context.Classes.FirstOrDefaultAsync(c => c.Id == id);
     }
 
+    public async Task<List<Guid>> GetClassIdsByTenantAsync()
+    {
+        return (await _context.Classes.ToListAsync()).Select(c => c.Id).ToList();
+    }
+
     public Task UpdateAsync(Class cls)
     {
         _context.Classes.Update(cls);

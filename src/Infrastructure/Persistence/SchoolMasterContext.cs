@@ -283,5 +283,5 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
     public DbSet<Subject> Subjects { get; set; }
     public DbSet<Period> Periods { get; set; }
     public DbSet<DailyAttendance> DailyAttendances { get; set; }
-    public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<TenantNumberSequence> TenantNumberSequences { get; set; }
 }

@@ -1,4 +1,5 @@
 using SchoolMaster.Domain.Enums;
+using SchoolMaster.Domain.Entities;
 
 namespace SchoolMaster.Application.DTOs;
 
@@ -14,5 +15,4 @@ public record StudentResponse(
     string GuardianPhone,
     string GuardianEmail,
     string? PhotoUrl
-
 );
