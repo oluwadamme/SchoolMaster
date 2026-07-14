@@ -29,6 +29,29 @@ public class StudentService : IStudentService
         _currentTenant = currentTenant;
     }
 
+    public async Task<BaseResponse<IReadOnlyList<StudentResponse>>> GetAllStudentsAsync()
+    {
+        var tenantId = _currentTenant.Id;
+        
+        var studentList = await _studentRepository.GetAllStudentsAsync(tenantId);
+        
+        var responseList = studentList.Select(student => new StudentResponse(
+            student.Id,
+            student.TenantId,
+            student.FirstName,
+            student.LastName,
+            student.StudentNumber,
+            student.DateOfBirth,
+            student.Gender,
+            student.GuardianName,
+            student.GuardianPhone,
+            student.GuardianEmail,
+            student.PhotoUrl
+        )).ToList();
+
+        return BaseResponse<IReadOnlyList<StudentResponse>>.SuccessResponse("Students retrieved successfully.", responseList);
+    }
+
     // Update student and associated user
     public async Task<BaseResponse<StudentResponse>> UpdateStudentAsync(UpdateStudentRequest request)
     {

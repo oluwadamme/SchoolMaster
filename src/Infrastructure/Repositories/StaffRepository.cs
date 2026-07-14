@@ -42,4 +42,18 @@ public class StaffRepository : IStaffRepository
     {
         return await _context.Staff.FirstOrDefaultAsync(s => s.Id == staffId);
     }
+
+    public async Task<Staff?> GetStaffByIdIgnoringFiltersAsync(Guid staffId, Guid tenantId)
+    {
+        return await _context.Staff
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.Id == staffId && s.TenantId == tenantId);
+    }
+
+    public async Task<IReadOnlyList<Staff>> GetAllStaffAsync(Guid tenantId)
+    {
+        return await _context.Staff
+            .Where(s => s.TenantId == tenantId)
+            .ToListAsync();
+    }
 }

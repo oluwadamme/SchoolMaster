@@ -64,10 +64,12 @@ try
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
     builder.Services.AddScoped<IStaffService, StaffService>(); // Register the StaffService
     builder.Services.AddScoped<IStudentService, StudentService>();
+    builder.Services.AddScoped<IAuditLogService, AuditLogService>();
     builder.Services.AddScoped<ITenantRepository, TenantRepository>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IStaffRepository, StaffRepository>(); // Register the StaffRepository
     builder.Services.AddScoped<IStudentRepository, StudentRepository>(); // Register the StudentRepository
+    builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>(); // Register the AuditLogRepository
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IJwtService, JwtService>(); // This line was already there, just showing context

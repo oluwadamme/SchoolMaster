@@ -62,4 +62,11 @@ public class StudentRepository : IStudentRepository
         await _context.Students
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(s => s.Id == studentId && s.TenantId == tenantId);
+
+    public async Task<IReadOnlyList<Student>> GetAllStudentsAsync(Guid tenantId)
+    {
+        return await _context.Students
+            .Where(s => s.TenantId == tenantId)
+            .ToListAsync();
+    }
 }

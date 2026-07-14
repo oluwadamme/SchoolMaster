@@ -42,6 +42,17 @@ public class StaffController : ControllerBase
     }
 
     /// <summary>
+    /// Retrieves all staff members for the current tenant.
+    /// </summary>
+    [HttpGet]
+    [HasPermission(Permission.StaffManage)]
+    public async Task<ActionResult<BaseResponse<IReadOnlyList<StaffResponse>>>> GetAllStaff()
+    {
+        var response = await _staffService.GetAllStaffAsync();
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Resends the 7-day invitation email to a staff member.
     /// </summary>
     [HttpPost("resend-invitation")]

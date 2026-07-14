@@ -287,6 +287,27 @@ public class StaffService : IStaffService
             "Bulk staff enrollment completed.", results);
     }
 
+    public async Task<BaseResponse<IReadOnlyList<StaffResponse>>> GetAllStaffAsync()
+    {
+        var tenantId = _currentTenant.Id;
+        
+        var staffList = await _staffRepository.GetAllStaffAsync(tenantId);
+        
+        var responseList = staffList.Select(staff => new StaffResponse(
+            staff.Id,
+            staff.UserId,
+            staff.TenantId,
+            staff.StaffNumber,
+            staff.FirstName,
+            staff.LastName,
+            staff.Department,
+            staff.StaffRole,
+            staff.EmploymentType
+        )).ToList();
+
+        return BaseResponse<IReadOnlyList<StaffResponse>>.SuccessResponse("Staff retrieved successfully.", responseList);
+    }
+
     public async Task<BaseResponse<bool>> ResendStaffInvitationAsync(ResendOtpRequest request)
     {
         var tenantId = _currentTenant.Id;
