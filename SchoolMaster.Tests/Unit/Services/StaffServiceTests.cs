@@ -68,6 +68,8 @@ public class StaffServiceTests
             
         // Tell the "Current School Tool" which school we are in
         _currentTenant.Setup(t => t.Id).Returns(tenantId);
+        _tenantSequenceRepo.Setup(r => r.ReserveBlockAsync(tenantId, "STAFF", year, 1))
+            .ReturnsAsync(1);
 
         // Note: For this example, we test the logic inside the service\
         // we bring the created staffService in line 34 to test

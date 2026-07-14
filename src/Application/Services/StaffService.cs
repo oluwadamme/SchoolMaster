@@ -309,6 +309,6 @@ public class StaffService : IStaffService
         var blockStart = await _tenantSequenceRepository.ReserveBlockAsync(tenantId, "STAFF", year, count);
 
 
-        return $"{prefix}{(blockStart + index):D3}";
+        return $"{prefix}{(blockStart + index):D6}";
     }
 }

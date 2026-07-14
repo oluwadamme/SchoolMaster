@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Domain.Entities;
@@ -91,6 +91,7 @@ public class OnboardingService : IOnboardingService
         );
 
         await _userRepository.AddUserAsync(adminUser);
+
         // 5. Return tenantId
         return BaseResponse<Guid>.SuccessResponse(
             "Tenant and Admin created successfully",
@@ -146,13 +147,8 @@ public class OnboardingService : IOnboardingService
         var subject = "Verify your email";
         var body = $"Hello {user.FirstName},\n\nThanks for registering with SchoolMaster!\n\nPlease verify your email by using the code below: {otp}\n\nRegards,\n\nSchoolMaster Team";
 
-        user.OtpToken = otp;
-        user.OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes);
-        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdateOtp(otp, DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes));
         await _userRepository.UpdateUserAsync(user);
-
-        _backgroundJobClient.Enqueue<IEmailService>(x =>
-        x.SendEmailAsync(user.Email, user.FirstName, subject, body));
 
         return BaseResponse<bool>.SuccessResponse("Verification token resent successfully", true);
     }

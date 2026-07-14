@@ -60,6 +60,10 @@ public class SchoolMasterContext(DbContextOptions<SchoolMasterContext> options, 
             .HasIndex(a => new { a.TenantId, a.StudentId, a.Date })
             .IsUnique(); // One record per student per day
 
+        modelBuilder.Entity<TenantNumberSequence>()
+            .HasIndex(s => new { s.TenantId, s.SequenceType, s.Year })
+            .IsUnique();
+
         var jsonOptions = new JsonSerializerOptions
         {
             Converters = { new JsonStringEnumConverter() }

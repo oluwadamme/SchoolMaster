@@ -28,7 +28,8 @@ public class UnitOfWork : IUnitOfWork
         await _context.SaveChangesAsync();
 
         // Dispatch AFTER commit — Hangfire only enqueues if the DB write succeeded.
-        //publish event(s) after DB write successfully
+        //publish event(s) after DB write successfully. when published this event is 
+        // to it's handler for execution
         foreach (var domainEvent in events)
             await _mediator.Publish(domainEvent);
     }

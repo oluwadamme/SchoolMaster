@@ -12,14 +12,41 @@ public class TenantSequenceRepository(SchoolMasterContext context) : ITenantSequ
         // exactly like a Postgres SEQUENCE.
         const string sql = @"
             INSERT INTO ""TenantNumberSequences"" (""Id"",""TenantId"",""SequenceType"",""Year"",""LastValue"")
-            VALUES (gen_random_uuid(), {0}, {1}, {2}, {3})
+            VALUES (gen_random_uuid(), @tenantId, @sequenceType, @year, @count)
             ON CONFLICT (""TenantId"",""SequenceType"",""Year"")
-            DO UPDATE SET ""LastValue"" = ""TenantNumberSequences"".""LastValue"" + {3}
+            DO UPDATE SET ""LastValue"" = ""TenantNumberSequences"".""LastValue"" + @count
             RETURNING ""LastValue"";";
 
-        var newHighWater = await context.Database
-            .SqlQueryRaw<long>(sql, tenantId, sequenceType, year, count)
-            .SingleAsync();
+        using var command = context.Database.GetDbConnection().CreateCommand();
+        command.CommandText = sql;
+        
+        var pTenantId = command.CreateParameter();
+        pTenantId.ParameterName = "@tenantId";
+        pTenantId.Value = tenantId;
+        command.Parameters.Add(pTenantId);
+
+        var pSequenceType = command.CreateParameter();
+        pSequenceType.ParameterName = "@sequenceType";
+        pSequenceType.Value = sequenceType;
+        command.Parameters.Add(pSequenceType);
+
+        var pYear = command.CreateParameter();
+        pYear.ParameterName = "@year";
+        pYear.Value = year;
+        command.Parameters.Add(pYear);
+
+        var pCount = command.CreateParameter();
+        pCount.ParameterName = "@count";
+        pCount.Value = count;
+        command.Parameters.Add(pCount);
+
+        if (command.Connection!.State != System.Data.ConnectionState.Open)
+        {
+            await command.Connection.OpenAsync();
+        }
+
+        var result = await command.ExecuteScalarAsync();
+        var newHighWater = Convert.ToInt64(result);
 
         return newHighWater - count + 1; // start of the block
     }
