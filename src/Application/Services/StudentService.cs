@@ -17,6 +17,7 @@ public class StudentService : IStudentService
     private readonly IStudentRepository _studentRepository;
     private readonly IGuardianRepository _guardianRepository;
     private readonly ITenantRepository _tenantRepository;
+    private readonly ITenantSequenceRepository _tenantSequenceRepository;
     private readonly ICurrentTenant _currentTenant;
 
     public StudentService(
@@ -24,12 +25,14 @@ public class StudentService : IStudentService
         IStudentRepository studentRepository, 
         IGuardianRepository guardianRepository,
         ITenantRepository tenantRepository,
+        ITenantSequenceRepository tenantSequenceRepository,
         ICurrentTenant currentTenant)
     {
         _userRepository = userRepository;
         _studentRepository = studentRepository;
         _guardianRepository = guardianRepository;
         _tenantRepository = tenantRepository;
+        _tenantSequenceRepository = tenantSequenceRepository;
         _currentTenant = currentTenant;
     }
 
@@ -120,7 +123,7 @@ public class StudentService : IStudentService
             throw new AlreadyExistException($"Email {request.Email} is already registered.");
         }
 
-        var (user, student, newGuardian, newGuardianUser) = await CreateStudentAndUserObject(request, tenantId);
+        var (user, student, newGuardian, newGuardianUser) = await CreateStudentGuardianAndUserObject(request, tenantId);
         
         if (newGuardianUser != null) await _userRepository.AddUserAsync(newGuardianUser);
         if (newGuardian != null) await _guardianRepository.AddGuardianAsync(newGuardian);
@@ -147,20 +150,26 @@ public class StudentService : IStudentService
         return BaseResponse<StudentResponse>.SuccessResponse("Student enrolled successfully.", response);
     }
 
-    private async Task<(User user, Student student, Guardian? newGuardian, User? newGuardianUser)> CreateStudentAndUserObject(CreateStudentRequest request, Guid tenantId)
+    private async Task<(User user, Student student, Guardian? newGuardian, User? newGuardianUser)> CreateStudentGuardianAndUserObject(
+        CreateStudentRequest request, Guid tenantId, string? preGeneratedStudentNumber = null, Dictionary<string, Guardian>? guardianCache = null)
     {
-        // 1. Check if guardian exists by email
-        var existingGuardian = await _guardianRepository.GetGuardianByEmailAsync(request.GuardianEmail, tenantId);
-        
-        Guardian guardianToLink;
+        Guardian? guardianToLink = null;
         Guardian? newGuardian = null;
         User? newGuardianUser = null;
+        
+        var normalizedGuardianEmail = request.GuardianEmail.Trim().ToLowerInvariant();
 
-        if (existingGuardian != null)
+        if (guardianCache != null && guardianCache.TryGetValue(normalizedGuardianEmail, out var cachedG))
         {
-            guardianToLink = existingGuardian;
+            guardianToLink = cachedG;
         }
-        else
+        else if (guardianCache == null)
+        {
+            // 1. Check if guardian exists by email
+            guardianToLink = await _guardianRepository.GetGuardianByEmailAsync(request.GuardianEmail, tenantId);
+        }
+
+        if (guardianToLink == null)
         {
             // Create a User for the new Guardian
             newGuardianUser = User.Create(
@@ -184,10 +193,15 @@ public class StudentService : IStudentService
                 Email = request.GuardianEmail
             };
             guardianToLink = newGuardian;
+            
+            if (guardianCache != null)
+            {
+                guardianCache[normalizedGuardianEmail] = newGuardian;
+            }
         }
 
         // Generate Permanent ID: GHA/2024/0001
-        var studentNumber = await GeneratePermanentStudentNumber(tenantId);
+        var studentNumber = preGeneratedStudentNumber ?? await GeneratePermanentStudentNumber(tenantId);
 
         var user = User.Create(
             tenantId: tenantId,
@@ -231,19 +245,19 @@ public class StudentService : IStudentService
         var tenant = await _tenantRepository.GetByIdAsync(tenantId);
         if (tenant == null) throw new TenantNotFoundException("School identification not found.");
 
-        // 1. Make a list of request student numbers and fetch all student numbers that already exist in the database
-        var studentNumbers = requestList.Select(x => x.StudentNumber.Trim()).Distinct().ToList();
-        var existingStudentNumbers = await _studentRepository.GetExistingStudentNumbersAsync(studentNumbers, tenantId);
+        // 1. Make a list of request emails and fetch all emails that already exist in the database
+        var studentEmails = requestList.Select(x => x.Email.Trim().ToLowerInvariant()).Distinct().ToList();
+        var existingStudentEmails = await _userRepository.GetExistingEmailsAsync(studentEmails, tenantId);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var accepted = new List<(int Row, BulkEnrollStudentItemRequest Req)>();
         var failures = new List<BulkEnrollmentFailure>();
 
         for (var i = 0; i < requestList.Count; i++)
         {
-            var studentNumber = requestList[i].StudentNumber.Trim();
-            if (existingStudentNumbers.Contains(studentNumber) || !seen.Add(studentNumber))
+            var email = requestList[i].Email.Trim().ToLowerInvariant();
+            if (existingStudentEmails.Contains(email) || !seen.Add(email))
             {
-                failures.Add(new BulkEnrollmentFailure(i + 1, requestList[i].StudentNumber, "Student number already exists."));
+                failures.Add(new BulkEnrollmentFailure(i + 1, requestList[i].Email, "Email already exists."));
                 continue;
             }
             accepted.Add((i + 1, requestList[i]));
@@ -259,84 +273,33 @@ public class StudentService : IStudentService
             // Fetch existing guardians by email for the accepted students
             var guardianEmails = accepted.Select(x => x.Req.GuardianEmail.Trim().ToLowerInvariant()).Distinct().ToList();
             var existingGuardiansList = await _guardianRepository.GetGuardiansByEmailsAsync(guardianEmails, tenantId);
-            var existingGuardians = existingGuardiansList.ToDictionary(g => g.Email.ToLowerInvariant());
+            // turns into dictionary using g.email as the key
+            var guardianCache = existingGuardiansList.ToDictionary(g => g.Email.ToLowerInvariant());
 
-            // Track new guardians created in this batch to avoid duplicates
-            var newGuardiansCache = new Dictionary<string, Guardian>(StringComparer.OrdinalIgnoreCase);
+            // Bulk generate student numbers
+            var year = DateTime.UtcNow.Year;
+            var prefix = $"{tenant.SchoolCode}/{year}/";
+            var startingSequence = await _tenantSequenceRepository.ReserveBlockAsync(tenantId, "STUDENT", year, accepted.Count);
 
             for (var i = 0; i < accepted.Count; i++)
             {
                 var req = accepted[i].Req;
-                var normalizedGuardianEmail = req.GuardianEmail.Trim().ToLowerInvariant();
+                var currentSequence = startingSequence + i;
+                var studentNumber = $"{prefix}{currentSequence:D6}";
 
-                Guardian guardianToLink;
-                if (existingGuardians.TryGetValue(normalizedGuardianEmail, out var existingG))
-                {
-                    guardianToLink = existingG;
-                }
-                else if (newGuardiansCache.TryGetValue(normalizedGuardianEmail, out var cachedG))
-                {
-                    guardianToLink = cachedG;
-                }
-                else
-                {
-                    // Create new Guardian and User for Guardian
-                    var newGuardianUser = User.Create(
-                        tenantId: tenantId,
-                        status: UserStatus.Active,
-                        roles: new List<UserRole> { UserRole.Parent },
-                        firstName: req.GuardianFirstName,
-                        lastName: req.GuardianLastName,
-                        email: req.GuardianEmail,
-                        passwordHash: BCrypt.Net.BCrypt.HashPassword("DefaultPassword123!") // Or another strategy
-                    );
-
-                    var newGuardian = new Guardian
-                    {
-                        Id = Guid.NewGuid(),
-                        UserId = newGuardianUser.Id,
-                        TenantId = tenantId,
-                        FirstName = req.GuardianFirstName,
-                        LastName = req.GuardianLastName,
-                        Phone = req.GuardianPhone,
-                        Email = req.GuardianEmail
-                    };
-
-                    guardianUsersToInsert.Add(newGuardianUser);
-                    guardiansToInsert.Add(newGuardian);
-                    newGuardiansCache[normalizedGuardianEmail] = newGuardian;
-                    guardianToLink = newGuardian;
-                }
-
-                var user = User.Create(
-                    tenantId: tenantId,
-                    status: UserStatus.Active,
-                    roles: new List<UserRole> { UserRole.Student },
-                    firstName: req.FirstName,
-                    lastName: req.LastName,
-                    email: req.Email,
-                    passwordHash: BCrypt.Net.BCrypt.HashPassword(req.Password)
+                // Map to CreateStudentRequest
+                var createReq = new CreateStudentRequest(
+                    req.FirstName, req.LastName, req.Email, req.Password, req.DateOfBirth, req.Gender,
+                    req.GuardianFirstName, req.GuardianLastName, req.GuardianPhone, req.GuardianEmail,
+                    req.MedicalNotes, req.PhotoUrl, req.ClassId
                 );
 
-                var student = new Student
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    TenantId = tenantId,
-                    ClassId = req.ClassId,
-                    StudentNumber = req.StudentNumber,
-                    FirstName = req.FirstName,
-                    LastName = req.LastName,
-                    DateOfBirth = req.DateOfBirth,
-                    Gender = req.Gender,
-                    GuardianId = guardianToLink.Id,
-                    Guardian = guardianToLink,
-                    MedicalNotes = req.MedicalNotes,
-                    PhotoUrl = req.PhotoUrl,
-                    Status = StudentStatus.Active,
-                    EnrolledAt = DateTime.UtcNow
-                };
+                var (user, student, newGuardian, newGuardianUser) = await CreateStudentGuardianAndUserObject(
+                    createReq, tenantId, studentNumber, guardianCache);
 
+                if (newGuardianUser != null) guardianUsersToInsert.Add(newGuardianUser);
+                if (newGuardian != null) guardiansToInsert.Add(newGuardian);
+                
                 usersToInsert.Add(user);
                 studentsToInsert.Add(student);
             }
@@ -374,21 +337,10 @@ public class StudentService : IStudentService
         var year = DateTime.UtcNow.Year;
         var prefix = $"{tenant.SchoolCode}/{year}/";
 
-        // 2. Find the last assigned code for this school and year
-        var lastCode = await _studentRepository.GetLastStudentNumberAsync(tenantId, prefix);
+        // 2. Reserve the next sequence number for this school and year
+        var nextSequence = await _tenantSequenceRepository.ReserveBlockAsync(tenantId, "STUDENT", year, 1);
 
-        int nextSequence = 1;
-        if (lastCode != null)
-        {
-            // 3. Extract sequence from "GHA/2024/000015" and increment
-            var parts = lastCode.Split('/');
-            if (parts.Length == 3 && int.TryParse(parts[2], out int lastSeq))
-            {
-                nextSequence = lastSeq + 1;
-            }
-        }
-
-        // 4. Return formatted ID with 6-digit padding (000001, 000002...)
+        // 3. Return formatted ID with 6-digit padding (000001, 000002...)
         return $"{prefix}{nextSequence:D6}";
     }
 }

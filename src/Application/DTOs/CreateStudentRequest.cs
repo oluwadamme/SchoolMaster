@@ -37,7 +37,6 @@ public class CreateStudentRequestValidator : AbstractValidator<CreateStudentRequ
 }
 
 public record BulkEnrollStudentItemRequest(
-    string StudentNumber,
     string FirstName,
     string LastName,
     string Email,
@@ -57,7 +56,6 @@ public class BulkEnrollStudentItemRequestValidator : AbstractValidator<BulkEnrol
 {
     public BulkEnrollStudentItemRequestValidator()
     {
-        RuleFor(x => x.StudentNumber).NotEmpty().WithMessage("Student number is required.");
         RuleFor(x => x.FirstName).NotEmpty().WithMessage("First name is required.");
         RuleFor(x => x.LastName).NotEmpty().WithMessage("Last name is required.");
         RuleFor(x => x.Email).NotEmpty().WithMessage("Email is required.").EmailAddress().WithMessage("Invalid email format.");
