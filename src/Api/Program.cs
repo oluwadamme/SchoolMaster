@@ -45,6 +45,7 @@ try
     // Add services to the container.
     builder.Services.AddControllers(options =>
         {
+            // runs after every controller action
             // Commits the Unit of Work after each action but before the result is serialized,
             // so a failed SaveChangesAsync surfaces as a catchable exception (see UnitOfWorkFilter).
             options.Filters.Add<UnitOfWorkFilter>();
@@ -63,10 +64,14 @@ try
     builder.Services.AddScoped<IOnboardingService, OnboardingService>();
     builder.Services.AddScoped<IStaffService, StaffService>(); // Register the StaffService
     builder.Services.AddScoped<IStudentService, StudentService>();
+    builder.Services.AddScoped<IAuditLogService, AuditLogService>();
     builder.Services.AddScoped<ITenantRepository, TenantRepository>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IStaffRepository, StaffRepository>(); // Register the StaffRepository
     builder.Services.AddScoped<IStudentRepository, StudentRepository>(); // Register the StudentRepository
+    builder.Services.AddScoped<IGuardianRepository, GuardianRepository>();
+    builder.Services.AddScoped<ITenantSequenceRepository, TenantSequenceRepository>();
+    builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>(); // Register the AuditLogRepository
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IJwtService, JwtService>(); // This line was already there, just showing context
@@ -85,6 +90,7 @@ try
     {
         cfg.RegisterServicesFromAssemblyContaining<Program>();
         cfg.RegisterServicesFromAssemblyContaining<StudentMarkedAbsentEventHandler>();
+        cfg.RegisterServicesFromAssemblyContaining<OtpVerificationEventHandler>();
     });
 
     // Attendance
@@ -92,7 +98,7 @@ try
     builder.Services.AddScoped<IAttendanceService, AttendanceService>();
     builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
     builder.Services.AddScoped<IStudentRepository, StudentRepository>();
-    builder.Services.AddScoped<IAbsenceNotificationJob, AbsenceNotificationJob>();
+    builder.Services.AddScoped<INotificationJob, NotificationJob>();
 
 
 
@@ -166,9 +172,9 @@ try
 
     // Swap job scheduler for a no-op in tests — no Hangfire server or storage needed
     if (!isTesting)
-        builder.Services.AddScoped<IAttendanceJobScheduler, HangfireAttendanceJobScheduler>();
+        builder.Services.AddScoped<IJobScheduler, HangfireJobScheduler>();
     else
-        builder.Services.AddScoped<IAttendanceJobScheduler, NoOpAttendanceJobScheduler>();
+        builder.Services.AddScoped<IJobScheduler, NoOpAttendanceJobScheduler>();
 
     // Skip real Hangfire and server in testing environment
     if (!isTesting)

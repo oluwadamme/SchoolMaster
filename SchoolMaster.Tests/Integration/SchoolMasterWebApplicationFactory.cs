@@ -20,7 +20,7 @@ namespace SchoolMaster.Tests.Integration;
 /// Migrations are applied once when the factory initialises.
 /// </summary>
 /// : WebApplicationFactory<Program>: This tells the computer: 
-/// "Take the real school app (the Program) and make a temporary copy for me in memory to play with."
+/// "Take the real school app and make a temporary copy for me in memory to play with."
 /// , IAsyncLifetime: This is a set of rules. It tells the computer how to Start the laboratory
 ///  and how to Clean it up when we are finished.
 public class SchoolMasterWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime

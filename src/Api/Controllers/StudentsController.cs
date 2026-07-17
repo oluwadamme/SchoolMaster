@@ -28,4 +28,34 @@ public class StudentsController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPost("bulk")]
+    [HasPermission(Permission.StudentsCreate)] // Bulk enrollment for admins
+    // IEnumerable<T> is a .NET interface that represents any read‑only collection of items of type T
+    public async Task<ActionResult<BaseResponse<IReadOnlyList<StudentResponse>>>> EnrollStudentsBulk([FromBody] BulkEnrollStudentsRequest requests)
+    {
+        var response = await _studentService.EnrollStudentsBulkAsync(requests);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Retrieves all students for the current tenant.
+    /// </summary>
+    [HttpGet]
+    [HasPermission(Permission.AcademicManage)] // Or whatever permission fits Students view
+    public async Task<ActionResult<BaseResponse<PagedResponse<StudentResponse>>>> GetAllStudents([FromQuery] PaginationRequest pagination)
+    {
+        var response = await _studentService.GetAllStudentsAsync(pagination.Page, pagination.PageSize);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Updates an existing student.
+    /// </summary>
+    [HttpPut]
+    [HasPermission(Permission.StudentsUpdate)]
+    public async Task<ActionResult<BaseResponse<StudentResponse>>> UpdateStudent([FromBody] UpdateStudentRequest request)
+    {
+        var response = await _studentService.UpdateStudentAsync(request);
+        return Ok(response);
+    }
 }

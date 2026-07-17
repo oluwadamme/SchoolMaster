@@ -1,6 +1,7 @@
 // src/Domain/Entities/AcademicYear.cs
 namespace SchoolMaster.Domain.Entities;
 
+
 public class AcademicYear
 {
     public Guid Id { get; private set; }
@@ -26,6 +27,8 @@ public class AcademicYear
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    
 
     public void SetAsCurrent() => IsCurrent = true;
     public void UnsetCurrent() => IsCurrent = false;

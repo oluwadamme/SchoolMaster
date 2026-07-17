@@ -3,10 +3,10 @@ using SchoolMaster.Application.Services.Interfaces;
 
 namespace SchoolMaster.Infrastructure.Jobs;
 
-public class AbsenceNotificationJob(
+public class NotificationJob(
     IStudentRepository studentRepo,
     ITenantRepository tenantRepo,
-    IEmailService emailService) : IAbsenceNotificationJob
+    IEmailService emailService) : INotificationJob
 {
     public async Task SendAsync(Guid tenantId, Guid studentId, DateOnly date)
     {
@@ -24,8 +24,9 @@ public class AbsenceNotificationJob(
         var schoolName = tenant?.Name ?? "SchoolMaster";
 
         var subject = $"Absence Notification — {date:MMMM d, yyyy}";
+        var guardianName = $"{student.Guardian?.FirstName} {student.Guardian?.LastName}";
         var body = $"""
-            Dear {student.GuardianName},
+            Dear {guardianName},
 
             This is to inform you that {student.FirstName} {student.LastName} was marked absent on {date:MMMM d, yyyy}.
 
@@ -35,6 +36,26 @@ public class AbsenceNotificationJob(
             {schoolName}
             """;
 
-        await emailService.SendEmailAsync(student.GuardianEmail, student.GuardianName, subject, body);
+        await emailService.SendEmailAsync(student.Guardian?.Email ?? "", guardianName, subject, body);
+    }
+
+    public async Task SendOtpVerificationAsync(Guid tenantId, string userEmail, string userName, string otpCode)
+    {
+        var tenant = await tenantRepo.GetByIdAsync(tenantId);
+        var schoolName = tenant?.Name ?? "SchoolMaster";
+
+        var subject = "OTP Verification Code";
+        var body = $"""
+            Dear {userName},
+
+            Your OTP verification code is: {otpCode}
+
+            Please use this code to complete your verification process.
+
+            Regards,
+            {schoolName}
+            """;
+
+        await emailService.SendEmailAsync(userEmail, userName, subject, body);
     }
 }

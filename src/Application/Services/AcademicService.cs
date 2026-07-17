@@ -344,6 +344,7 @@ public class AcademicService : IAcademicService
         if (newName != cls.Name && await _classRepo.ExistsByNameAsync(newName))
             throw new DuplicateClassNameException($"A class named '{newName}' already exists.");
 
+
         var newFormTeacherId = request.FormTeacherId.HasValue
             ? request.FormTeacherId.Value
             : cls.FormTeacherId;

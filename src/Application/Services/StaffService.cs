@@ -1,3 +1,4 @@
+using static System.Guid;
 namespace SchoolMaster.Application.Services;
 
 using SchoolMaster.Application.DTOs;
@@ -8,6 +9,7 @@ using SchoolMaster.Domain.Entities;
 using SchoolMaster.Domain.Enums;
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Transactions;
 using Hangfire;
 using Microsoft.Extensions.Options;
@@ -20,16 +22,16 @@ public class StaffService : IStaffService
     private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IOtpService _otpService;
-    private readonly IBackgroundJobClient _backgroundJobClient;
+    private readonly ITenantSequenceRepository _tenantSequenceRepository;
     private readonly IOptions<EmailVerificationOptions> _emailOptions;
 
     public StaffService(
-        IUserRepository userRepository, 
-        IStaffRepository staffRepository, 
+        IUserRepository userRepository,
+        IStaffRepository staffRepository,
         ITenantRepository tenantRepository,
         ICurrentTenant currentTenant,
         IOtpService otpService,
-        IBackgroundJobClient backgroundJobClient,
+        ITenantSequenceRepository tenantSequenceRepository,
         IOptions<EmailVerificationOptions> emailOptions)
     {
         _userRepository = userRepository;
@@ -37,26 +39,77 @@ public class StaffService : IStaffService
         _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
         _otpService = otpService;
-        _backgroundJobClient = backgroundJobClient;
+        _tenantSequenceRepository = tenantSequenceRepository;
         _emailOptions = emailOptions;
+    }
+
+    public async Task<BaseResponse<StaffResponse>> UpdateStaffAsync(UpdateStaffRequest request)
+    {
+        var tenantId = _currentTenant.Id;
+
+        // Assume IStaffRepository provides GetStaffByIdAsync
+        var staff = await _staffRepository.GetStaffByIdAsync(request.StaffId);
+        if (staff == null)
+        {
+            throw new KeyNotFoundException("Staff not found.");
+        }
+
+        // Fetch associated user
+        var user = await _userRepository.GetUserByIdAsync(staff.UserId, tenantId);
+        if (user == null)
+        {
+            throw new KeyNotFoundException("Associated user not found.");
+        }
+
+        if (request.Email.HasValue && request.Email.Value != null && request.Email.Value != user.Email)
+        {
+            // Ensure unique email within tenant
+            if (await _userRepository.ExistsByEmailAndTenantIdAsync(request.Email.Value, tenantId))
+            {
+                throw new AlreadyExistException($"Email {request.Email.Value} is already registered.");
+            }
+            user.Email = request.Email.Value;
+        }
+
+        // Update mutable fields if provided
+        if (request.FirstName.HasValue && request.FirstName.Value != null) { staff.FirstName = request.FirstName.Value; user.FirstName = request.FirstName.Value; }
+        if (request.LastName.HasValue && request.LastName.Value != null) { staff.LastName = request.LastName.Value; user.LastName = request.LastName.Value; }
+        if (request.Department.HasValue && request.Department.Value != null) staff.Department = request.Department.Value;
+        if (request.StaffRole.HasValue) staff.StaffRole = request.StaffRole.Value;
+        if (request.EmploymentType.HasValue) staff.EmploymentType = request.EmploymentType.Value;
+
+        // Persist changes
+        await _userRepository.UpdateUserAsync(user);
+
+        var response = new StaffResponse(
+            staff.Id,
+            staff.UserId,
+            staff.TenantId,
+            staff.StaffNumber,
+            staff.FirstName,
+            staff.LastName,
+            staff.Department,
+            staff.StaffRole,
+            staff.EmploymentType);
+
+        return BaseResponse<StaffResponse>.SuccessResponse("Staff updated successfully.", response);
     }
 
     public async Task<BaseResponse<StaffResponse>> CreateStaffAsync(CreateStaffRequest request)
     {
         var tenantId = _currentTenant.Id;
 
-        if (tenantId == Guid.Empty)
-        {
-            throw new UnauthorizedAccessException("Tenant ID not found for the current user.");
-        }
-
         if (await _userRepository.ExistsByEmailAndTenantIdAsync(request.Email, tenantId))
         {
             throw new AlreadyExistException($"User with email '{request.Email}' already exists in this tenant.");
         }
 
+        var tenant = await _tenantRepository.GetByIdAsync(tenantId);
+        if (tenant == null) throw new TenantNotFoundException("School identification not found.");
+
+
         // Generate the unique Staff Number automatically
-        var staffNumber = await GenerateStaffNumber(tenantId);
+        var staffNumber = await GenerateStaffNumber(tenantId, tenant.SchoolCode, 1, 0);
 
         var otp = _otpService.GenerateVerificationOtp();
         var otpExpiry = DateTime.UtcNow.AddDays(7); // Extended 7-day expiry for staff invitations
@@ -99,24 +152,125 @@ public class StaffService : IStaffService
 
         await _staffRepository.AddStaffAsync(staff);
 
-        // Staff Invitation through email When account is created (database has staff info)
-        var subject = "Action Required: Verify Your SchoolMaster Staff Account";
-        var body = $"Hello {request.FirstName},\n\nYou have been added as a staff member. Please use the code below to verify your email and activate your account:\n\nVerification Code: {otp}\n\nThis invitation will expire in 7 days. Once verified, you can log in using the credentials provided by your administrator.";
-
-        _backgroundJobClient.Enqueue<IEmailService>(x => x.SendEmailAsync(request.Email, request.FirstName, subject, body));
-
         var staffResponse = new StaffResponse(
-            staff.Id, 
-            staff.UserId, 
-            staff.TenantId, 
-            staff.StaffNumber, 
-            staff.FirstName, 
-            staff.LastName, 
-            staff.Department, 
-            staff.StaffRole, 
+            staff.Id,
+            staff.UserId,
+            staff.TenantId,
+            staff.StaffNumber,
+            staff.FirstName,
+            staff.LastName,
+            staff.Department,
+            staff.StaffRole,
             staff.EmploymentType);
 
         return BaseResponse<StaffResponse>.SuccessResponse("Staff created successfully.", staffResponse);
+    }
+
+    // ✅ Bulk enrollment for staff with partial success
+    //  the code takes all 1,000 students and puts them into one big group in the computer's memory.
+    // Then, it connects to the database exactly one time
+    public async Task<BaseResponse<BulkEnrollmentResult>> EnrollStaffBulkAsync(BulkEnrollStaffRequest requests)
+    {
+
+        var tenantId = _currentTenant.Id;
+        var requestList = requests.Staff.ToList();
+        var tenant = await _tenantRepository.GetByIdAsync(tenantId);
+        if (tenant == null) throw new TenantNotFoundException("School identification not found.");
+
+        // 1. Make a list of request emails and fetch all emails that already exist in the database
+        var emails = requestList.Select(x => x.Email.Trim().ToLowerInvariant()).Distinct().ToList();
+        var existingEmails = await _userRepository.GetExistingEmailsAsync(emails, tenantId);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var accepted = new List<(int Row, CreateStaffRequest Req)>();
+        var failures = new List<BulkEnrollmentFailure>();
+
+
+        for (var i = 0; i < requestList.Count; i++)
+        {
+            var email = emails[i];
+            if (existingEmails.Contains(email) || !seen.Add(email))
+            {
+                failures.Add(new BulkEnrollmentFailure(i + 1, requestList[i].Email, "Email already exists."));
+                continue;
+            }
+            accepted.Add((i + 1, requestList[i]));
+        }
+        if (accepted.Count > 0)
+        {
+            var usersToInsert = new List<User>();
+            var staffToInsert = new List<Staff>();
+            for (var i = 0; i < accepted.Count; i++)
+            {
+                var req = accepted[i].Req;
+                var otp = _otpService.GenerateVerificationOtp();
+                var otpExpiry = DateTime.UtcNow.AddDays(7);
+
+                var user = User.Create(
+                    tenantId: tenantId,
+                    status: UserStatus.PendingVerification,
+                    roles: new List<UserRole> { UserRole.Teacher },
+                    firstName: req.FirstName,
+                    lastName: req.LastName,
+                    email: req.Email,
+                    passwordHash: BCrypt.Net.BCrypt.HashPassword(req.Password),
+                    otpToken: otp,
+                    otpExpiry: otpExpiry
+                );
+                var staffNumber = await GenerateStaffNumber(tenantId, tenant.SchoolCode, accepted.Count, i);
+
+                usersToInsert.Add(user);
+                var staff = new Staff
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    TenantId = tenantId,
+                    StaffNumber = staffNumber,
+                    FirstName = req.FirstName,
+                    LastName = req.LastName,
+                    Department = req.Department,
+                    StaffRole = req.StaffRole,
+                    EmploymentType = req.EmploymentType,
+                    Status = StaffStatus.Active,
+                    EmployedAt = DateTime.UtcNow
+                };
+                staffToInsert.Add(staff);
+            }
+            await _userRepository.AddUsersBulkAsync(usersToInsert);
+            await _staffRepository.AddStaffBulkAsync(staffToInsert);
+        }
+        var results = new BulkEnrollmentResult
+        (
+            requestList.Count,
+            accepted.Count,
+            failures.Count,
+            failures
+        );
+
+        return BaseResponse<BulkEnrollmentResult>.SuccessResponse(
+            "Bulk staff enrollment completed.", results);
+    }
+
+    public async Task<BaseResponse<PagedResponse<StaffResponse>>> GetAllStaffAsync(int page, int pageSize)
+    {
+        var tenantId = _currentTenant.Id;
+        
+        var (staffList, totalCount) = await _staffRepository.GetAllStaffAsync(tenantId, page, pageSize);
+        
+        var responseList = staffList.Select(staff => new StaffResponse(
+            staff.Id,
+            staff.UserId,
+            staff.TenantId,
+            staff.StaffNumber,
+            staff.FirstName,
+            staff.LastName,
+            staff.Department,
+            staff.StaffRole,
+            staff.EmploymentType
+        )).ToList();
+
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        var pagedResponse = new PagedResponse<StaffResponse>(responseList, totalCount, totalPages, page, pageSize);
+        return BaseResponse<PagedResponse<StaffResponse>>.SuccessResponse("Staff retrieved successfully.", pagedResponse);
     }
 
     public async Task<BaseResponse<bool>> ResendStaffInvitationAsync(ResendOtpRequest request)
@@ -140,48 +294,21 @@ public class StaffService : IStaffService
 
         // 2. Generate a fresh code and a new 7-day window
         var otp = _otpService.GenerateVerificationOtp();
-        user.OtpToken = otp;
-        user.OtpExpiry = DateTime.UtcNow.AddDays(7);
-        user.UpdatedAt = DateTime.UtcNow;
 
+        user.UpdateOtp(otp, DateTime.UtcNow.AddDays(7));
         // 3. Save the update
         await _userRepository.UpdateUserAsync(user);
-        await _userRepository.SaveChangesAsync();
-
-        // 4. Queue the new email
-        var subject = "New Invitation: Verify Your SchoolMaster Staff Account";
-        var body = $"Hello {user.FirstName},\n\nA new invitation code has been generated for you. Please use the code below to verify your email:\n\nVerification Code: {otp}\n\nThis code will expire in 7 days.";
-
-        _backgroundJobClient.Enqueue<IEmailService>(x => 
-            x.SendEmailAsync(user.Email, user.FirstName, subject, body));
-
         return BaseResponse<bool>.SuccessResponse("Invitation resent successfully.", true);
     }
 
-    private async Task<string> GenerateStaffNumber(Guid tenantId)
+    private async Task<string> GenerateStaffNumber(Guid tenantId, string schoolCode, int count = 1, int index = 0)
     {
-        var tenant = await _tenantRepository.GetByIdAsync(tenantId);
-        if (tenant == null)
-        {
-            throw new TenantNotFoundException("School identification not found.");
-        }
 
         var year = DateTime.UtcNow.Year;
-        var prefix = $"{tenant.SchoolCode}/STF/{year}/";
+        var prefix = $"{schoolCode}/STF/{year}/";
+        var blockStart = await _tenantSequenceRepository.ReserveBlockAsync(tenantId, "STAFF", year, count);
 
-        var lastCode = await _staffRepository.GetLastStaffNumberAsync(tenantId, prefix);
 
-        int nextSequence = 1;
-        if (lastCode != null)
-        {
-            var parts = lastCode.Split('/');
-            // Expecting format: [CODE]/STF/[YEAR]/[SEQ] -> 4 parts
-            if (parts.Length == 4 && int.TryParse(parts[3], out int lastSeq))
-            {
-                nextSequence = lastSeq + 1;
-            }
-        }
-
-        return $"{prefix}{nextSequence:D6}";
+        return $"{prefix}{(blockStart + index):D6}";
     }
 }

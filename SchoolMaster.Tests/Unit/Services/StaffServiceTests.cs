@@ -24,7 +24,7 @@ public class StaffServiceTests
     private readonly Mock<ICurrentTenant> _currentTenant = new();
     // using a fake otp generator to predict the otp code that will be generated, so we can test the email verification process
     private readonly Mock<IOtpService> _otpService = new();
-    private readonly Mock<IBackgroundJobClient> _jobClient = new();
+    private readonly Mock<ITenantSequenceRepository> _tenantSequenceRepo = new();
 
     // creating new EmailVerificatioOptions
 
@@ -38,7 +38,7 @@ public class StaffServiceTests
         _tenantRepo.Object,
         _currentTenant.Object,
         _otpService.Object,
-        _jobClient.Object,
+        _tenantSequenceRepo.Object,
         _options);
 
     [Fact]
@@ -68,6 +68,8 @@ public class StaffServiceTests
             
         // Tell the "Current School Tool" which school we are in
         _currentTenant.Setup(t => t.Id).Returns(tenantId);
+        _tenantSequenceRepo.Setup(r => r.ReserveBlockAsync(tenantId, "STAFF", year, 1))
+            .ReturnsAsync(1);
 
         // Note: For this example, we test the logic inside the service\
         // we bring the created staffService in line 34 to test

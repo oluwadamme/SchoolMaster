@@ -49,6 +49,34 @@ public static class StudentSeeder
         };
         db.Users.Add(user);
 
+        var guardianUser = new User
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            FirstName = "Test",
+            LastName = "Guardian",
+            Email = guardianEmail ?? $"guardian-{unique}@test.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Test@123!"),
+            Roles = [UserRole.Parent],
+            Status = UserStatus.Active,
+            IsEmailVerified = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        db.Users.Add(guardianUser);
+
+        var guardian = new Guardian
+        {
+            Id = Guid.NewGuid(),
+            UserId = guardianUser.Id,
+            TenantId = tenantId,
+            FirstName = "Test",
+            LastName = "Guardian",
+            Phone = "08000000000",
+            Email = guardianUser.Email
+        };
+        db.Guardians.Add(guardian);
+
         var studentId = Guid.NewGuid();
         var student = new Student
         {
@@ -61,9 +89,7 @@ public static class StudentSeeder
             LastName = "Student",
             DateOfBirth = new DateOnly(2012, 1, 1),
             Gender = Gender.Male,
-            GuardianName = "Test Guardian",
-            GuardianPhone = "08000000000",
-            GuardianEmail = guardianEmail ?? $"guardian-{unique}@test.com",
+            GuardianId = guardian.Id,
             Status = StudentStatus.Active,
             EnrolledAt = DateTime.UtcNow
         };

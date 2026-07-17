@@ -78,7 +78,7 @@ public class OnboardingServiceTests
     }
 
     [Fact]
-    public async Task CreateTenantWithAdminAsync_WithValidRequest_EnqueuesVerificationEmail()
+    public async Task CreateTenantWithAdminAsync_WithValidRequest_AddsOtpVerificationEventToUser()
     {
         _userRepo.Setup(r => r.ExistsByEmailInTenantAsync(It.IsAny<string>(), It.IsAny<Guid>())).ReturnsAsync(false);
         _tenantRepo.Setup(r => r.ExistsBySubdomainAsync(It.IsAny<string>())).ReturnsAsync(false);
@@ -86,7 +86,8 @@ public class OnboardingServiceTests
 
         await CreateSut().CreateTenantWithAdminAsync(MakeValidRequest());
 
-        _backgroundJobClient.Verify(b => b.Create(It.IsAny<Job>(), It.IsAny<IState>()), Times.Once);
+        _userRepo.Verify(r => r.AddUserAsync(It.Is<User>(u => 
+            u.DomainEvents.Any(e => e.GetType().Name == "OtpVerificationEvent"))), Times.Once);
     }
 
     [Fact]
@@ -219,7 +220,7 @@ public class OnboardingServiceTests
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task ResendVerificationOtpAsync_WithUnverifiedUser_StoresNewOtpAndEnqueuesEmail()
+    public async Task ResendVerificationOtpAsync_WithUnverifiedUser_StoresNewOtpAndAddsEvent()
     {
         var tenantId = Guid.NewGuid();
         var user = new User
@@ -237,7 +238,7 @@ public class OnboardingServiceTests
         Assert.True(result.Success);
         Assert.Equal("new-otp", user.OtpToken);
         _userRepo.Verify(r => r.UpdateUserAsync(user), Times.Once);
-        _backgroundJobClient.Verify(b => b.Create(It.IsAny<Job>(), It.IsAny<IState>()), Times.Once);
+        Assert.Contains(user.DomainEvents, e => e.GetType().Name == "OtpVerificationEvent");
     }
 
     [Fact]
