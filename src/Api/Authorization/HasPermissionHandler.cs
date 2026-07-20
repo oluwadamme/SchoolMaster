@@ -2,9 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using SchoolMaster.Domain.Authorization;
 
 namespace SchoolMaster.Api.Authorization;
-// actually logic to compare the permissions in the claim with the permission in the attribute
+// actually logic to compare the permissions in the claim with the permission requirement in the attribute
 
-// whenever the system sees a HasPermissionRequirement created to store the attribute data, it calls this class
+// AuthorizationHandlerContext is a smaller "box" c# creates to store
+// the user claims and the requirement
 public class HasPermissionHandler : AuthorizationHandler<HasPermissionRequirement>
 {
     
@@ -20,7 +21,7 @@ public class HasPermissionHandler : AuthorizationHandler<HasPermissionRequiremen
 
         if (permissionClaims.Contains(requirement.Permission.ToString()))
         {
-            // when called, goes to HasSucceeded property in microsoft and changes it from
+            // when called, goes to HasSucceeded property in context and changes it from
             // false to true
             context.Succeed(requirement);
         }

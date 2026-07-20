@@ -1,3 +1,6 @@
+# DockerFile: How to build and run your app on any platform\
+# contains your app and everything it needs to run
+
 # Stage 1: Build
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src

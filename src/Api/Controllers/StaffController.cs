@@ -25,6 +25,11 @@ public class StaffController : ControllerBase
     /// Creates a new staff member and their associated user account.
     /// </summary>
     [HttpPost]
+    // when a request is made to this method, The ASP.NET Core system looks at the HasPermissionAttribute object
+    // sitting in memory for that exact method, and reads the text string stored inside it
+    // the system takes that string and gets the HasPermissionRequirement object that matches the string
+    // it then passes that object to the HandleRequirementAsync method in the HasPermissionHandler class
+    
     [HasPermission(Permission.StaffManage)]
     public async Task<ActionResult<BaseResponse<StaffResponse>>> CreateStaff([FromBody] CreateStaffRequest request)
     {
@@ -35,7 +40,7 @@ public class StaffController : ControllerBase
 
     [HttpPost("bulk")]
     [HasPermission(Permission.StaffManage)] // Bulk enrollment for admins
-    public async Task<ActionResult<BaseResponse<IReadOnlyList<BaseResponse<StaffResponse>>>>> EnrollStaffBulk([FromBody] BulkEnrollStaffRequest requests)
+    public async Task<ActionResult<BaseResponse<BulkEnrollmentResult>>> EnrollStaffBulk([FromBody] BulkEnrollStaffRequest requests)
     {
         var response = await _staffService.EnrollStaffBulkAsync(requests);
         return Ok(response);

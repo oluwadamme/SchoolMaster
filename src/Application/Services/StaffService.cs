@@ -51,14 +51,14 @@ public class StaffService : IStaffService
         var staff = await _staffRepository.GetStaffByIdAsync(request.StaffId);
         if (staff == null)
         {
-            throw new KeyNotFoundException("Staff not found.");
+            throw new UserNotFoundException("Staff not found.");
         }
 
         // Fetch associated user
         var user = await _userRepository.GetUserByIdAsync(staff.UserId, tenantId);
         if (user == null)
         {
-            throw new KeyNotFoundException("Associated user not found.");
+            throw new UserNotFoundException("Associated user not found.");
         }
 
         if (request.Email.HasValue && request.Email.Value != null && request.Email.Value != user.Email)
@@ -114,41 +114,10 @@ public class StaffService : IStaffService
         var otp = _otpService.GenerateVerificationOtp();
         var otpExpiry = DateTime.UtcNow.AddDays(7); // Extended 7-day expiry for staff invitations
 
-        // 1. Create the User (Object Initializer)
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            TenantId = tenantId,
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            Email = request.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Roles = new List<UserRole> { UserRole.Teacher },
-            Status = UserStatus.PendingVerification,
-            IsEmailVerified = false,
-            OtpToken = otp,
-            OtpExpiry = otpExpiry,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+        // 1. Create the User and Staff objects in memory
+        var (user, staff) = CreateStaffAndUserObject(request, tenantId, staffNumber, otp, otpExpiry);
 
         await _userRepository.AddUserAsync(user);
-
-        // 2. Create the Staff (Object Initializer)
-        var staff = new Staff
-        {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            TenantId = tenantId,
-            StaffNumber = staffNumber,
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            Department = request.Department,
-            StaffRole = request.StaffRole,
-            EmploymentType = request.EmploymentType,
-            Status = StaffStatus.Active,
-            EmployedAt = DateTime.UtcNow
-        };
 
         await _staffRepository.AddStaffAsync(staff);
 
@@ -205,34 +174,11 @@ public class StaffService : IStaffService
                 var otp = _otpService.GenerateVerificationOtp();
                 var otpExpiry = DateTime.UtcNow.AddDays(7);
 
-                var user = User.Create(
-                    tenantId: tenantId,
-                    status: UserStatus.PendingVerification,
-                    roles: new List<UserRole> { UserRole.Teacher },
-                    firstName: req.FirstName,
-                    lastName: req.LastName,
-                    email: req.Email,
-                    passwordHash: BCrypt.Net.BCrypt.HashPassword(req.Password),
-                    otpToken: otp,
-                    otpExpiry: otpExpiry
-                );
                 var staffNumber = await GenerateStaffNumber(tenantId, tenant.SchoolCode, accepted.Count, i);
 
+                var (user, staff) = CreateStaffAndUserObject(req, tenantId, staffNumber, otp, otpExpiry);
+
                 usersToInsert.Add(user);
-                var staff = new Staff
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    TenantId = tenantId,
-                    StaffNumber = staffNumber,
-                    FirstName = req.FirstName,
-                    LastName = req.LastName,
-                    Department = req.Department,
-                    StaffRole = req.StaffRole,
-                    EmploymentType = req.EmploymentType,
-                    Status = StaffStatus.Active,
-                    EmployedAt = DateTime.UtcNow
-                };
                 staffToInsert.Add(staff);
             }
             await _userRepository.AddUsersBulkAsync(usersToInsert);
@@ -299,6 +245,37 @@ public class StaffService : IStaffService
         // 3. Save the update
         await _userRepository.UpdateUserAsync(user);
         return BaseResponse<bool>.SuccessResponse("Invitation resent successfully.", true);
+    }
+    private (User User, Staff Staff) CreateStaffAndUserObject(CreateStaffRequest req, Guid tenantId, string staffNumber, string otp, DateTime otpExpiry)
+    {
+        var user = User.Create(
+            tenantId: tenantId,
+            status: UserStatus.PendingVerification,
+            roles: new List<UserRole> { UserRole.Teacher },
+            firstName: req.FirstName,
+            lastName: req.LastName,
+            email: req.Email,
+            passwordHash: BCrypt.Net.BCrypt.HashPassword(req.Password),
+            otpToken: otp,
+            otpExpiry: otpExpiry
+        );
+
+        var staff = new Staff
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            TenantId = tenantId,
+            StaffNumber = staffNumber,
+            FirstName = req.FirstName,
+            LastName = req.LastName,
+            Department = req.Department,
+            StaffRole = req.StaffRole,
+            EmploymentType = req.EmploymentType,
+            Status = StaffStatus.Active,
+            EmployedAt = DateTime.UtcNow
+        };
+
+        return (user, staff);
     }
 
     private async Task<string> GenerateStaffNumber(Guid tenantId, string schoolCode, int count = 1, int index = 0)

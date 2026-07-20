@@ -249,7 +249,7 @@ public class StudentService : IStudentService
         var studentEmails = requestList.Select(x => x.Email.Trim().ToLowerInvariant()).Distinct().ToList();
         var existingStudentEmails = await _userRepository.GetExistingEmailsAsync(studentEmails, tenantId);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var accepted = new List<(int Row, BulkEnrollStudentItemRequest Req)>();
+        var accepted = new List<(int Row, CreateStudentRequest Req)>();
         var failures = new List<BulkEnrollmentFailure>();
 
         for (var i = 0; i < requestList.Count; i++)
