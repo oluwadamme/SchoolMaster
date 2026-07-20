@@ -20,9 +20,8 @@ public class UnitOfWorkFilter(IUnitOfWork unitOfWork) : IAsyncActionFilter
         var executed = await next();
 
         // Only commit when the action returned without throwing. In this codebase every error
-        // path throws a typed exception (handled by ExceptionMiddleware), so a clean return is
-        // always a success. SaveChangesAsync is a no-op when the change tracker is empty, so
-        // read-only actions cost nothing.
+        // path throws a typed exception stored in executed.Exception.
+        // (handled by ExceptionMiddleware) so a clean return is always a success.
         // runs for every controller action and before the response is serialized
         if (executed.Exception is null)
             await unitOfWork.SaveChangesAsync();

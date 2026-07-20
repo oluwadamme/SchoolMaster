@@ -53,13 +53,16 @@ public class SchoolMasterWebApplicationFactory : WebApplicationFactory<Program>,
         // migrate incrementally — we just need the schema/c# model to exist.
         // creates "private tool box" to isolate and use a tool then destroy it afterwards. because the database tool is too heavy to just stay in memory, so we create a scope to use it and then destroy it after we are done.
         using var scope = Services.CreateScope();
-        // db tool to build the tables in the database 
+        // db - instance of schoolmastercontext
+        // does the work of the schoolmastercontext(creates tables and apply the 
+        // specified restrictions in OnModelCreating in your database)
         var db = scope.ServiceProvider.GetRequiredService<SchoolMasterContext>();
         await db.Database.EnsureCreatedAsync();
     }
 
     public new async Task DisposeAsync()
     {
+        // disposes after every test class
         await _postgres.DisposeAsync();
         await base.DisposeAsync();
     }
