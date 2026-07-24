@@ -408,7 +408,12 @@ try
                                // Configure the HTTP request pipeline.
     var disableRateLimit = builder.Configuration.GetValue<bool>("RateLimiting:Disable", false);
     if (!isTesting && !disableRateLimit) app.UseRateLimiter();
-    if (app.Environment.IsDevelopment())
+    // Swagger is on in Development, and otherwise on unless explicitly disabled via Swagger__Enabled=false.
+    // This is a learning project, so the API explorer is exposed on the deployed instance on purpose;
+    // set Swagger__Enabled=false to hide it for a real production surface.
+    var enableSwagger = app.Environment.IsDevelopment()
+        || builder.Configuration.GetValue<bool>("Swagger:Enabled", true);
+    if (enableSwagger)
     {
         app.UseSwagger();
         app.UseSwaggerUI();
@@ -428,6 +433,32 @@ try
         }
     }
 
+
+    // Root landing page. The API has no UI, so hitting "/" would otherwise 404. Give a friendly
+    // page with a link to the Swagger explorer instead.
+    app.MapGet("/", () => Results.Content(
+        """
+        <!doctype html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>SchoolMaster API</title>
+          <style>
+            body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 4rem auto; padding: 0 1rem; line-height: 1.6; }
+            a.button { display: inline-block; margin-top: 1rem; padding: 0.6rem 1.2rem; background: #2563eb; color: #fff; border-radius: 6px; text-decoration: none; }
+            code { background: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 4px; }
+          </style>
+        </head>
+        <body>
+          <h1>Welcome to SchoolMaster</h1>
+          <p>This is the SchoolMaster API. There is no web UI here yet — explore the endpoints below.</p>
+          <a class="button" href="/swagger">Open API docs (Swagger)</a>
+          <p style="margin-top:2rem;color:#64748b">Health check: <code>/health/ready</code></p>
+        </body>
+        </html>
+        """,
+        "text/html")).AllowAnonymous();
 
     // Liveness: is the process up. Deliberately runs no checks (Predicate false), so a database
     // outage never makes the platform kill and restart an otherwise healthy container, which
