@@ -28,12 +28,12 @@ using System.Text.Json;
 using SchoolMaster.Api.Converters;
 using SchoolMaster.Infrastructure.Jobs;
 using SchoolMaster.Infrastructure.EventHandlers;
-using MediatR;
+using Microsoft.AspNetCore.HttpOverrides;
 
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .WriteTo.File("logs/api-logs.json") // The File Sink!
-    .CreateLogger();
+// Log.Logger = new LoggerConfiguration()
+//     .WriteTo.Console()
+//     .WriteTo.File("logs/api-logs.json") // The File Sink!
+//     .CreateLogger();
 
 // Load .env file but DO NOT overwrite existing environment variables (like those set by Docker)
 DotNetEnv.Env.NoClobber().Load();
@@ -41,6 +41,10 @@ DotNetEnv.Env.NoClobber().Load();
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    // Immediately after WebApplication.CreateBuilder(args)
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
     builder.Host.UseSerilog(); // Tell .NET to use Serilog instead of the default logger
 
     // where you register the services you will use
@@ -127,7 +131,7 @@ try
                ValidateIssuerSigningKey = true,
                ValidIssuer = jwtSettings["Issuer"],
                ValidAudience = jwtSettings["Audience"],
-               IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
+               IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]??""))
            };
 
            // After signature/lifetime checks pass, re-validate the user server-side: the security stamp
@@ -269,6 +273,16 @@ try
         }
     });
     });
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                             | ForwardedHeaders.XForwardedProto
+                             | ForwardedHeaders.XForwardedHost;
+    // PaaS edge IPs are dynamic, so the default known-proxy allowlist cannot be used.
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 
     // CORS: only the origins listed under "Cors:AllowedOrigins" may call the API from a browser.
     // With none configured the policy allows no cross-origin access at all (safe default for an API
@@ -291,18 +305,6 @@ try
 
     var app = builder.Build();
 
-    if (!isTesting)
-    {
-        using (var scope = app.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<SchoolMasterContext>();
-            if (db.Database.IsRelational())
-            {
-                db.Database.Migrate();
-            }
-        }
-    }
-
     // The Hangfire dashboard exposes job payloads (which include guardian emails) and lets jobs be
     // triggered. It has no admin auth of its own here, so mount it only in Development. Revisit with a
     // proper IDashboardAuthorizationFilter before ever exposing it in production.
@@ -311,6 +313,8 @@ try
         app.UseHangfireDashboard();
     }
 
+
+    app.UseForwardedHeaders();
     // 1. First Aid Station (Catch all errors)
     app.UseMiddleware<ExceptionMiddleware>();
     // 2. Check-in Desk (Identify the School)
@@ -348,6 +352,20 @@ try
         app.UseSwaggerUI();
     }
 
+    if (!isTesting)
+    {
+        app.UseHangfireDashboard("/hangfire", new DashboardOptions { Authorization = [new HangfireDashboardAuthorizationFilter()] });
+
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SchoolMasterContext>();
+            if (db.Database.IsRelational())
+            {
+                db.Database.Migrate();
+            }
+        }
+    }
+
 
     app.MapControllers();
     app.Run();
@@ -360,6 +378,9 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+return 1; // non-zero so the platform fails the deploy instead of promoting it
+
 
 // Required so WebApplicationFactory<Program> in integration tests can access this type.
 public partial class Program { }
