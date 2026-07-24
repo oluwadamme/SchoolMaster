@@ -25,7 +25,7 @@ public class OtpServiceTests
     public void GenerateVerificationOtp_ProducesVaryingValues()
     {
         var mockEnv = new Mock<IHostEnvironment>();
-        mockEnv.Setup(m => m.EnvironmentName).Returns(Environments.Development);
+        mockEnv.Setup(m => m.EnvironmentName).Returns(Environments.Production);
         var service = new OtpService(mockEnv.Object);
 
         // Not a strict randomness test, just a guard that it is not a constant.
@@ -50,7 +50,7 @@ public class OtpServiceTests
     }
 
     [Fact]
-    public void GenerateVerificationOtp_WhenNotDevelopment_ReturnsFourDigitString()
+    public void GenerateVerificationOtp_WhenNotDevelopment_ReturnsSixDigitString()
     {
         // Arrange
         var mockEnv = new Mock<IHostEnvironment>();
@@ -61,7 +61,7 @@ public class OtpServiceTests
         var result = service.GenerateVerificationOtp();
 
         // Assert
-        Assert.Equal(4, result.Length);
+        Assert.Equal(6, result.Length);
         Assert.True(int.TryParse(result, out _));
     }
 
