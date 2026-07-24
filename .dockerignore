@@ -2,6 +2,12 @@ bin/
 obj/
 logs/
 .git/
+
+# Never bake local secrets/config into the image. These belong in the host/platform
+# environment (Railway variables, compose env), not in image layers.
+.env
+*.env
+.env.*
 .gitignore
 *.md
 Docs/
