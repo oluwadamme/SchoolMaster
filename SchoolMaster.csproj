@@ -15,6 +15,15 @@
     <Content Remove="SchoolMaster.Tests/**" />
   </ItemGroup>
 
+  <!-- Same for the load test project. Without this the root project's **/*.cs glob picks up
+       SchoolMaster.LoadTests/obj/**/AssemblyInfo.cs and the build fails with CS0579
+       duplicate assembly attribute errors. -->
+  <ItemGroup>
+    <Compile Remove="SchoolMaster.LoadTests/**" />
+    <None Remove="SchoolMaster.LoadTests/**" />
+    <Content Remove="SchoolMaster.LoadTests/**" />
+  </ItemGroup>
+
   <ItemGroup>
      <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
@@ -30,6 +39,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.5" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />

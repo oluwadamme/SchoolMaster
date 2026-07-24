@@ -29,11 +29,19 @@ using SchoolMaster.Api.Converters;
 using SchoolMaster.Infrastructure.Jobs;
 using SchoolMaster.Infrastructure.EventHandlers;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
-// Log.Logger = new LoggerConfiguration()
-//     .WriteTo.Console()
-//     .WriteTo.File("logs/api-logs.json") // The File Sink!
-//     .CreateLogger();
+// Console only. Container filesystems are ephemeral, so the old file sink lost every log on
+// restart, and writing to logs/ fails outright once the container runs as a non-root user.
+// The hosting platform captures stdout, so that is the only sink worth having in production.
+// This must stay assigned: builder.Host.UseSerilog() with no argument binds to this static
+// logger, and leaving it unset silently swaps in a no-op logger that writes nothing at all.
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateLogger();
 
 // Load .env file but DO NOT overwrite existing environment variables (like those set by Docker)
 DotNetEnv.Env.NoClobber().Load();
@@ -196,6 +204,12 @@ try
     builder.Services.AddDbContext<SchoolMasterContext>((sp, options) =>
         options.UseNpgsql(sp.GetRequiredService<NpgsqlDataSource>()));
 
+    // Tagged "ready" so it runs for the readiness probe only. AddDbContextCheck calls
+    // CanConnectAsync, which opens a connection without querying an entity, so the tenant
+    // global query filters are never involved and no tenant context is needed.
+    builder.Services.AddHealthChecks()
+        .AddDbContextCheck<SchoolMasterContext>("database", tags: ["ready"]);
+
     builder.Services.AddRateLimiter(options =>
         {
             // If they get blocked, send back a 429 Too Many Requests
@@ -305,15 +319,6 @@ try
 
     var app = builder.Build();
 
-    // The Hangfire dashboard exposes job payloads (which include guardian emails) and lets jobs be
-    // triggered. It has no admin auth of its own here, so mount it only in Development. Revisit with a
-    // proper IDashboardAuthorizationFilter before ever exposing it in production.
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseHangfireDashboard();
-    }
-
-
     app.UseForwardedHeaders();
     // 1. First Aid Station (Catch all errors)
     app.UseMiddleware<ExceptionMiddleware>();
@@ -367,19 +372,38 @@ try
     }
 
 
+    // Liveness: is the process up. Deliberately runs no checks (Predicate false), so a database
+    // outage never makes the platform kill and restart an otherwise healthy container, which
+    // would turn a short database blip into a restart loop.
+    app.MapHealthChecks("/health/live", new HealthCheckOptions
+    {
+        Predicate = _ => false
+    }).AllowAnonymous();
+
+    // Readiness: is it safe to route traffic here. Runs everything tagged "ready".
+    app.MapHealthChecks("/health/ready", new HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("ready")
+    }).AllowAnonymous();
+
     app.MapControllers();
     app.Run();
+
+    // app.Run() returns on a graceful shutdown, which is a success.
+    return 0;
 }
 catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "The application failed to start correctly");
+
+    // Non-zero so the hosting platform fails the deploy instead of promoting a container
+    // that logged a fatal error and then exited looking successful.
+    return 1;
 }
 finally
 {
     Log.CloseAndFlush();
 }
-
-return 1; // non-zero so the platform fails the deploy instead of promoting it
 
 
 // Required so WebApplicationFactory<Program> in integration tests can access this type.
