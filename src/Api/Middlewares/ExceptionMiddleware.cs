@@ -34,6 +34,8 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             UnauthorizedAccessException ex => (HttpStatusCode.Unauthorized, ex.Message),
             EmailNotVerifiedException ex => (HttpStatusCode.Forbidden, ex.Message),
             AccountInactiveException ex => (HttpStatusCode.Forbidden, ex.Message),
+            AccountLockedException ex => (HttpStatusCode.TooManyRequests, ex.Message),
+            TenantMismatchException ex => (HttpStatusCode.Forbidden, ex.Message),
             KeyNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
             AcademicYearNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),
             TermNotFoundException ex => (HttpStatusCode.NotFound, ex.Message),

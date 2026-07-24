@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using SchoolMaster.Application.Services.Interfaces;
 using SchoolMaster.Application.Repositories;
 using SchoolMaster.Domain.Entities;
@@ -104,21 +104,27 @@ public class OnboardingService : IOnboardingService
         var tenantId = _currentTenant.Id;
         if (tenantId == Guid.Empty)
         {
-            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Verification flow invoked with no resolved tenant.");
 
             throw new InvalidOtpException("Invalid OTP or Email address.");
         }
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
-        if (user == null || user.OtpToken != request.OtpToken || user.OtpExpiry < DateTime.UtcNow)
+        if (user == null || user.OtpToken == null || user.OtpToken != request.OtpToken || user.OtpExpiry < DateTime.UtcNow)
         {
+            // Count only genuine wrong guesses against a live OTP (not missing or expired) toward the
+            // lockout, then wipe the OTP once the attempt budget is exhausted.
+            if (user is { OtpToken: not null } && user.OtpExpiry >= DateTime.UtcNow && user.OtpToken != request.OtpToken)
+            {
+                user.RegisterFailedOtpAttempt();
+                await _userRepository.UpdateUserAsync(user);
+            }
+
             throw new InvalidOtpException("Invalid OTP or email address.");
         }
         user.IsEmailVerified = true;
         user.Status = UserStatus.Active;
-        user.OtpToken = null;
-        user.OtpExpiry = null;
+        user.ClearOtp();
         user.UpdatedAt = DateTime.UtcNow;
-        user.Status = UserStatus.Active;
         await _userRepository.UpdateUserAsync(user);
         return BaseResponse<bool>.SuccessResponse("Email verified successfully", true);
     }
@@ -128,24 +134,22 @@ public class OnboardingService : IOnboardingService
         var tenantId = _currentTenant.Id;
         if (tenantId == Guid.Empty)
         {
-            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Verification flow invoked with no resolved tenant.");
 
             return BaseResponse<bool>.SuccessResponse("Otp sent successfully", true);
         }
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null)
         {
-            Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Resend-OTP target not found in tenant {TenantId}.", tenantId);
             return BaseResponse<bool>.SuccessResponse("Otp sent successfully", true);
         }
         if (user.IsEmailVerified)
         {
-            Log.Error("Email already verified for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Resend-OTP requested for an already-verified account in tenant {TenantId}.", tenantId);
             return BaseResponse<bool>.SuccessResponse("Email already verified", true);
         }
         var otp = _otpService.GenerateVerificationOtp();
-        var subject = "Verify your email";
-        var body = $"Hello {user.FirstName},\n\nThanks for registering with SchoolMaster!\n\nPlease verify your email by using the code below: {otp}\n\nRegards,\n\nSchoolMaster Team";
 
         user.UpdateOtp(otp, DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes));
         await _userRepository.UpdateUserAsync(user);

@@ -40,10 +40,27 @@ public class AuthService : IAuthService
         // 1. Find the user by email. Tenant scoping is applied by the global query filter.
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
 
-        // If no user is found with that email, it means the email is wrong.
+        // Unknown email and wrong password return the same error (and status) so an attacker cannot use
+        // login responses to discover which emails are registered.
         if (user == null)
         {
-            throw new UserNotFoundException("Invalid email or password.");
+            throw new InvalidCredentialsException("Invalid email or password.");
+        }
+
+        // Account-level brute-force protection: once locked, reject even a correct password until the
+        // lockout window passes. This complements the per-IP rate limiter on the endpoint.
+        if (user.IsLockedOut())
+        {
+            throw new AccountLockedException(
+                "Account temporarily locked due to too many failed login attempts. Please try again later.");
+        }
+
+        // Account-level brute-force protection: once locked, reject even a correct password until the
+        // lockout window passes. This complements the per-IP rate limiter on the endpoint.
+        if (user.IsLockedOut())
+        {
+            throw new AccountLockedException(
+                "Account temporarily locked due to too many failed login attempts. Please try again later.");
         }
 
         // 2. Check if the password is correct.
@@ -52,6 +69,8 @@ public class AuthService : IAuthService
 
         if (!isPasswordValid)
         {
+            user.RegisterFailedLogin();
+            await _userRepository.UpdateUserAsync(user);
             throw new InvalidCredentialsException("Invalid email or password.");
         }
 
@@ -75,8 +94,9 @@ public class AuthService : IAuthService
         var accessToken = _jwtService.GenerateAccessToken(user);
         var refreshToken = _jwtService.GenerateRefreshToken();
 
-        // 4. Save the Refresh Token to the database.
+        // 4. Clear any failed-login state and save the new Refresh Token to the database.
         // We set it to live for 7 days.
+        user.RegisterSuccessfulLogin();
         user.UpdateRefreshToken(refreshToken, 7);
         await _userRepository.UpdateUserAsync(user);
 
@@ -180,14 +200,14 @@ public class AuthService : IAuthService
         var tenantId = _currentTenant.Id;
         if (tenantId == Guid.Empty)
         {
-            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Password flow invoked with no resolved tenant.");
 
             return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
         }
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null)
         {
-            Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Password flow target not found in tenant {TenantId}.", tenantId);
             return BaseResponse<bool>.SuccessResponse("Forgot password token sent successfully", true);
         }
         var otp = _otpService.GenerateVerificationOtp();
@@ -196,6 +216,7 @@ public class AuthService : IAuthService
 
         user.OtpToken = otp;
         user.OtpExpiry = DateTime.UtcNow.AddMinutes(_emailOptions.Value.ExpirationInMinutes);
+        user.OtpAttemptCount = 0; // fresh OTP starts with a clean attempt budget
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateUserAsync(user);
 
@@ -209,14 +230,23 @@ public class AuthService : IAuthService
         var tenantId = _currentTenant.Id;
         if (tenantId == Guid.Empty)
         {
-            Log.Error("Tenant not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Password flow invoked with no resolved tenant.");
 
             throw new InvalidOtpException("Invalid OTP or Email address.");
         }
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
-        if (user == null || user.OtpToken != request.Otp)
+        if (user == null || user.OtpToken == null || user.OtpToken != request.Otp)
         {
-            Log.Error("User not found for email {Email} in tenant {TenantId}", request.Email, tenantId);
+            Log.Warning("Password flow target not found in tenant {TenantId}.", tenantId);
+
+            // Count the wrong guess against the account and wipe the OTP once the budget is exhausted,
+            // so a 6-digit code cannot be brute-forced within its lifetime.
+            if (user is { OtpToken: not null })
+            {
+                user.RegisterFailedOtpAttempt();
+                await _userRepository.UpdateUserAsync(user);
+            }
+
             throw new InvalidOtpException("Invalid OTP or Email address.");
         }
         if (user.OtpExpiry < DateTime.UtcNow)
@@ -224,8 +254,11 @@ public class AuthService : IAuthService
             throw new OtpExpiredException("OTP has expired. Please request a new one.");
         }
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-        user.OtpToken = null;
-        user.OtpExpiry = null;
+        user.ClearOtp();
+        // Reset invalidates every existing session: rotate the stamp (kills access tokens) and drop the
+        // refresh token. Otherwise a thief who triggered the reset, or a stale session, would survive it.
+        user.RotateSecurityStamp();
+        user.ClearRefreshToken();
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateUserAsync(user);
         return BaseResponse<bool>.SuccessResponse("Password reset successfully", true);

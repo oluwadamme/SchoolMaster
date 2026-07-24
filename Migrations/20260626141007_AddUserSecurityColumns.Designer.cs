@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SchoolMaster.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using SchoolMaster.Infrastructure.Persistence;
 namespace SchoolMaster.Migrations
 {
     [DbContext(typeof(SchoolMasterContext))]
-    partial class SchoolMasterContextModelSnapshot : ModelSnapshot
+    [Migration("20260626141007_AddUserSecurityColumns")]
+    partial class AddUserSecurityColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -54,44 +57,6 @@ namespace SchoolMaster.Migrations
                         .HasFilter("\"IsCurrent\" = true");
 
                     b.ToTable("AcademicYears");
-                });
-
-            modelBuilder.Entity("SchoolMaster.Domain.Entities.AuditLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("NewValues")
-                        .HasColumnType("text");
-
-                    b.Property<string>("OldValues")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PrimaryKey")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("TableName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AuditLogs");
                 });
 
             modelBuilder.Entity("SchoolMaster.Domain.Entities.Class", b =>
@@ -170,42 +135,6 @@ namespace SchoolMaster.Migrations
                         .IsUnique();
 
                     b.ToTable("DailyAttendances");
-                });
-
-            modelBuilder.Entity("SchoolMaster.Domain.Entities.Guardian", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("Guardians");
                 });
 
             modelBuilder.Entity("SchoolMaster.Domain.Entities.Period", b =>
@@ -339,8 +268,17 @@ namespace SchoolMaster.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("GuardianId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("GuardianEmail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("GuardianName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("GuardianPhone")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -367,8 +305,6 @@ namespace SchoolMaster.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("GuardianId");
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -448,30 +384,6 @@ namespace SchoolMaster.Migrations
                         .IsUnique();
 
                     b.ToTable("Tenants");
-                });
-
-            modelBuilder.Entity("SchoolMaster.Domain.Entities.TenantNumberSequence", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<long>("LastValue")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("SequenceType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("TenantNumberSequences");
                 });
 
             modelBuilder.Entity("SchoolMaster.Domain.Entities.Term", b =>
@@ -617,17 +529,6 @@ namespace SchoolMaster.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("SchoolMaster.Domain.Entities.Guardian", b =>
-                {
-                    b.HasOne("SchoolMaster.Domain.Entities.User", "User")
-                        .WithOne()
-                        .HasForeignKey("SchoolMaster.Domain.Entities.Guardian", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SchoolMaster.Domain.Entities.Period", b =>
                 {
                     b.HasOne("SchoolMaster.Domain.Entities.Class", "Class")
@@ -659,19 +560,11 @@ namespace SchoolMaster.Migrations
 
             modelBuilder.Entity("SchoolMaster.Domain.Entities.Student", b =>
                 {
-                    b.HasOne("SchoolMaster.Domain.Entities.Guardian", "Guardian")
-                        .WithMany("Students")
-                        .HasForeignKey("GuardianId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("SchoolMaster.Domain.Entities.User", "User")
                         .WithOne()
                         .HasForeignKey("SchoolMaster.Domain.Entities.Student", "UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Guardian");
 
                     b.Navigation("User");
                 });
@@ -699,11 +592,6 @@ namespace SchoolMaster.Migrations
             modelBuilder.Entity("SchoolMaster.Domain.Entities.AcademicYear", b =>
                 {
                     b.Navigation("Terms");
-                });
-
-            modelBuilder.Entity("SchoolMaster.Domain.Entities.Guardian", b =>
-                {
-                    b.Navigation("Students");
                 });
 #pragma warning restore 612, 618
         }

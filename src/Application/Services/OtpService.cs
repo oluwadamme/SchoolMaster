@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using Microsoft.Extensions.Hosting;
 using SchoolMaster.Application.Services.Interfaces;
 
 namespace SchoolMaster.Application.Services;
@@ -20,6 +19,6 @@ public class OtpService : IOtpService
             return "000000";
         }
 
-        return RandomNumberGenerator.GetInt32(10000).ToString("D4");
+        return RandomNumberGenerator.GetInt32(1_000_000).ToString("D6");
     }
 }
