@@ -11,8 +11,12 @@ public class OtpServiceTests
 {
     [Fact]
     public void GenerateVerificationOtp_ReturnsSixDigitNumericCode()
+
     {
-        var otp = new OtpService().GenerateVerificationOtp();
+        var mockEnv = new Mock<IHostEnvironment>();
+        mockEnv.Setup(m => m.EnvironmentName).Returns(Environments.Development);
+        var service = new OtpService(mockEnv.Object);
+        var otp = service.GenerateVerificationOtp();
 
         Assert.Matches(new Regex("^[0-9]{6}$"), otp);
     }
@@ -20,14 +24,17 @@ public class OtpServiceTests
     [Fact]
     public void GenerateVerificationOtp_ProducesVaryingValues()
     {
-        var service = new OtpService();
+        var mockEnv = new Mock<IHostEnvironment>();
+        mockEnv.Setup(m => m.EnvironmentName).Returns(Environments.Development);
+        var service = new OtpService(mockEnv.Object);
 
         // Not a strict randomness test, just a guard that it is not a constant.
         var values = Enumerable.Range(0, 20).Select(_ => service.GenerateVerificationOtp()).ToHashSet();
 
         Assert.True(values.Count > 1);
     }
-   [Fact]
+
+    [Fact]
     public void GenerateVerificationOtp_WhenDevelopment_ReturnsSixZeros()
     {
         // Arrange
@@ -59,7 +66,7 @@ public class OtpServiceTests
     }
 
     [Fact]
-    public void GenerateVerificationOtp_ReturnsSixDigitNumericCode()
+    public void GenerateVerificationOtp_WhenDevelopment_ReturnsSixDigitNumericCode()
     {
         var mockEnv = new Mock<IHostEnvironment>();
         mockEnv.Setup(m => m.EnvironmentName).Returns(Environments.Development);
@@ -69,7 +76,7 @@ public class OtpServiceTests
     }
 
     [Fact]
-    public void GenerateVerificationOtp_ProducesVaryingValues()
+    public void GenerateVerificationOtp_WhenNotDevelopment_ProducesVaryingValues()
     {
         var mockEnv = new Mock<IHostEnvironment>();
         mockEnv.Setup(m => m.EnvironmentName).Returns(Environments.Production);
