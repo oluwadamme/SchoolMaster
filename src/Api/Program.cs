@@ -382,7 +382,26 @@ try
     });
 
     app.UseCors("DefaultCors");
-    app.UseSerilogRequestLogging(); // Add before UseAuthentication()
+    // One structured completion line per request ("HTTP {Method} {Path} responded {StatusCode} in {Elapsed}ms").
+    // The enricher attaches the context we actually need when reading Railway's stdout: who, which tenant,
+    // from where. Runs on the way out, so User (set by UseAuthentication) and TenantId (set by
+    // TenantResolverMiddleware) are already populated even though this sits earlier in the pipeline.
+    app.UseSerilogRequestLogging(options =>
+    {
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value ?? "unknown");
+            diagnosticContext.Set("ClientIP", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+            diagnosticContext.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
+
+            if (httpContext.Items.TryGetValue("TenantId", out var tenantId) && tenantId is Guid tid)
+                diagnosticContext.Set("TenantId", tid);
+
+            var userId = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId is not null)
+                diagnosticContext.Set("UserId", userId);
+        };
+    });
 
     app.UseAuthentication();   // ← BEFORE authorization
     app.UseAuthorization();    // ← AFTER authentication

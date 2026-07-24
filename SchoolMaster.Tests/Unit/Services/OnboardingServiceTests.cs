@@ -58,7 +58,10 @@ public class OnboardingServiceTests
         var result = await CreateSut().CreateTenantWithAdminAsync(MakeValidRequest());
 
         Assert.True(result.Success);
-        Assert.NotEqual(Guid.Empty, result.Data);
+        Assert.NotNull(result.Data);
+        Assert.NotEqual(Guid.Empty, result.Data.TenantId);
+        Assert.Equal(MakeValidRequest().Subdomain, result.Data.Subdomain);
+        Assert.True(result.Data.EmailVerificationRequired);
     }
 
     [Fact]
