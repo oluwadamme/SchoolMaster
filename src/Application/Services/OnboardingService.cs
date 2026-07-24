@@ -40,7 +40,7 @@ public class OnboardingService : IOnboardingService
 
     }
 
-    public async Task<BaseResponse<Guid>> CreateTenantWithAdminAsync(OnboardTenantRequest request)
+    public async Task<BaseResponse<OnboardTenantResponse>> CreateTenantWithAdminAsync(OnboardTenantRequest request)
     {
         // 1. Subdomain must be globally unique (it is the tenant's address).
         if (await _tenantRepository.ExistsBySubdomainAsync(request.Subdomain))
@@ -73,9 +73,6 @@ public class OnboardingService : IOnboardingService
         await _tenantRepository.AddTenantAsync(tenant);
 
         var otp = _otpService.GenerateVerificationOtp();
-        var subject = "Verify your email";
-        var body = $"Hello {request.AdminFirstName},\n\nThanks for registering with SchoolMaster!\n\nPlease verify your email by using the code below: {otp}\n\nRegards,\n\nSchoolMaster Team";
-
 
         // 3. Create Admin User (linked to tenant)
         var adminUser = User.Create(
@@ -92,23 +89,24 @@ public class OnboardingService : IOnboardingService
 
         await _userRepository.AddUserAsync(adminUser);
 
-        // 5. Return tenantId
-        return BaseResponse<Guid>.SuccessResponse(
-            "Tenant and Admin created successfully",
-            tenant.Id
+        // 5. Return the created tenant plus the next step: the admin must verify their email
+        //    with the OTP before the account becomes active.
+        return BaseResponse<OnboardTenantResponse>.SuccessResponse(
+            "Tenant and admin created successfully. A verification code has been sent to the admin email.",
+            new OnboardTenantResponse(
+                TenantId: tenant.Id,
+                SchoolName: tenant.Name,
+                Subdomain: tenant.Subdomain,
+                AdminEmail: adminUser.Email,
+                EmailVerificationRequired: true
+            )
         );
     }
 
     public async Task<BaseResponse<bool>> VerifyUserEmailAsync(VerifyUserEmailRequest request)
     {
-        var tenantId = _currentTenant.Id;
-        if (tenantId == Guid.Empty)
-        {
-            Log.Warning("Verification flow invoked with no resolved tenant.");
-
-            throw new InvalidOtpException("Invalid OTP or Email address.");
-        }
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
+        Log.Information("Verifying email {Email} with OTP {OtpToken}", user?.Email, request.OtpToken);
         if (user == null || user.OtpToken == null || user.OtpToken != request.OtpToken || user.OtpExpiry < DateTime.UtcNow)
         {
             // Count only genuine wrong guesses against a live OTP (not missing or expired) toward the
@@ -119,7 +117,7 @@ public class OnboardingService : IOnboardingService
                 await _userRepository.UpdateUserAsync(user);
             }
 
-            throw new InvalidOtpException("Invalid OTP or email address.");
+            throw new InvalidOtpException("Invalid OTP or Email address.");
         }
         user.IsEmailVerified = true;
         user.Status = UserStatus.Active;

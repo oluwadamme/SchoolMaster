@@ -18,10 +18,10 @@ public class OnboardingController : ControllerBase
     }
     [EnableRateLimiting("AuthLimit")]
     [HttpPost("tenants")]
-    public async Task<ActionResult<BaseResponse<Guid>>> OnboardTenant([FromBody] OnboardTenantRequest request)
+    public async Task<ActionResult<BaseResponse<OnboardTenantResponse>>> OnboardTenant([FromBody] OnboardTenantRequest request)
     {
         var result = await _onboardingService.CreateTenantWithAdminAsync(request);
-        return CreatedAtAction(nameof(OnboardTenant), new { id = result.Data }, result);
+        return CreatedAtAction(nameof(OnboardTenant), new { id = result.Data?.TenantId }, result);
     }
 
     [EnableRateLimiting("AuthLimit")]

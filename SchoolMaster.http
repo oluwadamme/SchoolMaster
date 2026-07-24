@@ -17,12 +17,12 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "schoolName": "Susie Academy",
-  "subdomain": "susie-academy-edu",
-  "contactEmail": "hello@susie.edu",
-  "adminEmail": "susanojone@gmail.com",
-  "AdminFirstName":"Susan",
-  "AdminLastName":"Ojone",
+  "schoolName": "Damilola Academy",
+  "subdomain": "damme-academy-edu",
+  "contactEmail": "hello@damme.edu",
+  "adminEmail": "adeniyidamilola246@gmail.com",
+  "adminFirstName":"Damilola",
+  "adminLastName":"Adeniyi",
   "adminPassword": "SecurePassword123!"
 }
 
@@ -529,16 +529,3 @@ GET {{SchoolMaster_HostAddress}}/api/v1/staff
 Accept: application/json
 Authorization: Bearer {{token}}
 X-Tenant-Subdomain: {{tenantSubdomain}}
-
- # # #   G e t   a l l   s t u d e n t s 
- G E T   { { S c h o o l M a s t e r _ H o s t A d d r e s s } } / a p i / v 1 / s t u d e n t s 
- A c c e p t :   a p p l i c a t i o n / j s o n 
- A u t h o r i z a t i o n :   B e a r e r   { { t o k e n } } 
- X - T e n a n t - S u b d o m a i n :   { { t e n a n t S u b d o m a i n } }  
-  
- # # #   G e t   a l l   A u d i t   L o g s  
- G E T   { { S c h o o l M a s t e r _ H o s t A d d r e s s } } / a p i / v 1 / a u d i t l o g s  
- C o n t e n t - T y p e :   a p p l i c a t i o n / j s o n  
- A c c e p t :   a p p l i c a t i o n / j s o n  
- A u t h o r i z a t i o n :   B e a r e r   { { t o k e n } }  
- 

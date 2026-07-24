@@ -57,14 +57,19 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             _ => (HttpStatusCode.InternalServerError,
                                           "An unexpected error occurred. we are working to fix it.")
         };
-        // Log the error (only log full details for 500s)
+        // Include the request line so a log entry points at the exact call that failed.
+        var method = context.Request.Method;
+        var path = context.Request.Path.Value;
+
+        // Log the error (only log full details + stack trace for 500s; handled domain errors are expected).
         if (statusCode == HttpStatusCode.InternalServerError)
         {
-            logger.LogError(exception, "Unhandled exception occurred");
+            logger.LogError(exception, "Unhandled exception on {Method} {Path}", method, path);
         }
         else
         {
-            logger.LogWarning("Handled exception: {Message}", exception.Message);
+            logger.LogWarning("Handled {ExceptionType} on {Method} {Path}: {Message}",
+                exception.GetType().Name, method, path, exception.Message);
         }
         // If the response has already begun streaming, we cannot rewrite the status or body.
         // Bail rather than throw a secondary "response already started" exception that would
