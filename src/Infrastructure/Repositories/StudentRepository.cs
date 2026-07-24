@@ -19,7 +19,22 @@ public class StudentRepository : IStudentRepository
     public async Task AddStudentAsync(Student student)
     {
         await _context.Students.AddAsync(student);
-        await _context.SaveChangesAsync();
+    }
+
+    public async Task AddStudentsBulkAsync(IEnumerable<Student> students)
+    {
+        await _context.Students.AddRangeAsync(students);
+    }
+
+    public async Task<HashSet<string>> GetExistingStudentNumbersAsync(IEnumerable<string> studentNumbers, Guid tenantId)
+    {
+        var numbersList = studentNumbers.ToList();
+        var existing = await _context.Students
+            .Where(s => s.TenantId == tenantId && numbersList.Contains(s.StudentNumber))
+            .Select(s => s.StudentNumber)
+            .ToListAsync();
+
+        return new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task<bool> ExistsByStudentNumberAsync(string studentNumber, Guid tenantId)
@@ -39,6 +54,7 @@ public class StudentRepository : IStudentRepository
 
     public async Task<List<Student>> GetStudentsByClassIdAsync(Guid classId) =>
         await _context.Students
+            .Include(s => s.Guardian)
             .Where(s => s.ClassId == classId)
             .ToListAsync();
 
@@ -56,11 +72,25 @@ public class StudentRepository : IStudentRepository
     // Guid.Empty. Explicit tenantId param provides the isolation guarantee instead.
     public async Task<Student?> GetStudentByIdIgnoringFiltersAsync(Guid studentId, Guid tenantId) =>
         await _context.Students
+            .Include(s => s.Guardian)
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(s => s.Id == studentId && s.TenantId == tenantId);
 
-    public async Task SaveChangesAsync()
+    public async Task<(List<Student> Items, int TotalCount)> GetAllStudentsAsync(Guid tenantId, int page, int pageSize)
     {
-        await _context.SaveChangesAsync();
+        var query = _context.Students
+            .AsNoTracking()
+            .Include(s => s.Guardian)
+            .Where(s => s.TenantId == tenantId);
+
+        var totalCount = await query.CountAsync();
+        
+        var items = await query
+            .OrderByDescending(s => s.EnrolledAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
     }
 }

@@ -1,15 +1,25 @@
 using System.Security.Cryptography;
+using Microsoft.Extensions.Hosting;
 using SchoolMaster.Application.Services.Interfaces;
 
 namespace SchoolMaster.Application.Services;
 
 public class OtpService : IOtpService
 {
+    private readonly IHostEnvironment _env;
+
+    public OtpService(IHostEnvironment env)
+    {
+        _env = env;
+    }
+
     public string GenerateVerificationOtp()
     {
-        // 6 digits (000000-999999). A 4-digit code only has 10k combinations, which is brute-forceable
-        // within the OTP lifetime; 6 digits raises that to 1,000,000 and pairs with the per-account
-        // attempt lockout enforced when the OTP is verified.
+        if (_env.IsDevelopment())
+        {
+            return "000000";
+        }
+
         return RandomNumberGenerator.GetInt32(1_000_000).ToString("D6");
     }
 }

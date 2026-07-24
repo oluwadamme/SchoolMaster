@@ -5,31 +5,42 @@ using SchoolMaster.Domain.Authorization;
 using SchoolMaster.Domain.Enums;
 using Xunit;
 
+// Unit tests test pieces of code in isolation thus it's best to build the context
+// manually rather than waiting on a fake web server. it is much faster this way
+
 namespace SchoolMaster.Tests.Unit.Authorization;
 
 public class HasPermissionHandlerTests
 {
+    // manually creating what .NET does automatically
     private static AuthorizationHandlerContext MakeContext(
         HasPermissionRequirement requirement,
         IEnumerable<Claim> claims)
     {
         var identity = new ClaimsIdentity(claims, "Test");
         var user = new ClaimsPrincipal(identity);
+        // a built in class that takes in the requirement and the claim
+        // a container that bundles the requirement and the claim
         return new AuthorizationHandlerContext(new[] { requirement }, user, null);
     }
 
     // -------------------------------------------------------------------------
     // Success cases
     // -------------------------------------------------------------------------
-
+    // Xunit scans your project looking for [Fact] attributes, 
+    // and executes the method marked with it.
     [Fact]
     public async Task HandleAsync_Succeeds_WhenRequiredPermissionClaimIsPresent()
     {
         var requirement = new HasPermissionRequirement(Permission.StudentsCreate);
+
         var context = MakeContext(requirement, new[]
         {
             new Claim(PermissionClaimType.Type, Permission.StudentsCreate.ToString())
         });
+
+        // .handleAsync is a built in method that does some quick setup in the background,
+        //  and then it automatically calls the HandleRequirementAsync method that you wrote
 
         await new HasPermissionHandler().HandleAsync(context);
 

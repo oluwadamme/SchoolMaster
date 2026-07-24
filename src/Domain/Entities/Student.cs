@@ -15,15 +15,14 @@ public class Student
     public required string LastName { get; set; }
     public required DateOnly DateOfBirth { get; set; }
     public required Gender Gender { get; set; }
-    public required string GuardianName { get; set; }
-    public required string GuardianPhone { get; set; }
-    public required string GuardianEmail { get; set; }
+    public required Guid GuardianId { get; set; }
     public string? MedicalNotes { get; set; }
     public string? PhotoUrl { get; set; }
     public required StudentStatus Status { get; set; }
     public required DateTime EnrolledAt { get; set; }
 
     public User User { get; set; }
+    public Guardian Guardian { get; set; }
 
   
 }

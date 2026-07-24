@@ -21,6 +21,25 @@ public class UserRepository : IUserRepository
         // await _context.SaveChangesAsync();
     }
 
+    public async Task AddUsersBulkAsync(IEnumerable<User> users)
+    {
+        await _context.Users.AddRangeAsync(users);
+    }
+
+    public async Task<HashSet<string>> GetExistingEmailsAsync(IEnumerable<string> emails, Guid tenantId)
+    {
+        var emailList = emails.ToList();
+        var existing = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(x => x.TenantId == tenantId && emailList.Contains(x.Email))
+            .Select(x => x.Email)
+            .ToListAsync();
+        // Hashset Organizes items in a list such that you can instantly jump straight to an item
+        // instead of looking one by one
+        // "Take the emails we got from the database, put them into a super-fast box, and make sure capital letters do not matter
+        return new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
+    }
+
     public async Task<bool> ExistsByEmailInTenantAsync(string email, Guid tenantId)
     {
         // IgnoreQueryFilters: onboarding runs before the new tenant is the ambient tenant, so the
@@ -50,8 +69,8 @@ public class UserRepository : IUserRepository
     {
         // Tenant scoping comes from the global query filter (_currentTenant.Id); the explicit
         // tenantId parameter is retained for the existing staff-invitation call sites.
-        return await _context.Users
-            .FirstOrDefaultAsync(x => x.Email == email);
+        return await _context.Users.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Email == email && x.TenantId == tenantId);
     }
 
     public async Task<User?> GetUserByIdAsync(Guid userId, Guid tenantId)

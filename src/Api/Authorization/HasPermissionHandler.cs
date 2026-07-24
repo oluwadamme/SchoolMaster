@@ -7,7 +7,7 @@ namespace SchoolMaster.Api.Authorization;
 // whenever the system sees a HasPermissionRequirement created to store the attribute data, it calls this class
 public class HasPermissionHandler : AuthorizationHandler<HasPermissionRequirement>
 {
-    // context is the user request
+    
     
     protected override Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
@@ -20,6 +20,8 @@ public class HasPermissionHandler : AuthorizationHandler<HasPermissionRequiremen
 
         if (permissionClaims.Contains(requirement.Permission.ToString()))
         {
+            // when called, goes to HasSucceeded property in microsoft and changes it from
+            // false to true
             context.Succeed(requirement);
         }
 

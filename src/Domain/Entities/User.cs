@@ -1,11 +1,13 @@
 // Identity layer — auth only
+using SchoolMaster.Domain.Common;
 namespace SchoolMaster.Domain.Entities;
-using SchoolMaster.Domain.Enums;
-using System.Diagnostics.CodeAnalysis;
 
-public class User
+using SchoolMaster.Domain.Enums;
+using SchoolMaster.Domain.Events;
+
+public class User : IHasDomainEvents
 {
-    public required Guid Id { get; set; }
+    private readonly List<IDomainEvent> _domainEvents = new(); public required Guid Id { get; set; }
     public required Guid TenantId { get; set; }
     public required string FirstName { get; set; }
     public required string LastName { get; set; }
@@ -44,6 +46,9 @@ public class User
     public const int MaxFailedLoginAttempts = 5;
     public const int LockoutMinutes = 15;
     public const int MaxOtpAttempts = 5;
+    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+    public void ClearDomainEvents() => _domainEvents.Clear();
+
 
     public void UpdateRefreshToken(string token, int daysToLive)
     {
@@ -116,5 +121,41 @@ public class User
         RotateSecurityStamp();
         ClearRefreshToken();
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public static User Create(Guid tenantId, UserStatus status, List<UserRole> roles, string firstName, string lastName, string email, string passwordHash, string? otpToken = null, DateTime? otpExpiry = null)
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            FirstName = firstName,
+            LastName = lastName,
+            Email = email,
+            PasswordHash = passwordHash,
+            Status = status,
+            IsEmailVerified = false,
+            Roles = roles,
+            OtpToken = otpToken,
+            OtpExpiry = otpExpiry,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        if (status == UserStatus.PendingVerification && otpToken != null)
+        {
+            user._domainEvents.Add(new OtpVerificationEvent(tenantId, email, firstName, otpToken));
+        }
+
+        return user;
+    }
+
+    public void UpdateOtp(string otpToken, DateTime otpExpiry)
+    {
+        OtpToken = otpToken;
+        OtpExpiry = otpExpiry;
+        OtpAttemptCount = 0;
+        UpdatedAt = DateTime.UtcNow;
+
+        _domainEvents.Add(new OtpVerificationEvent(TenantId, Email, FirstName, otpToken));
     }
 }

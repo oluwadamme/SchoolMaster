@@ -3,6 +3,7 @@ using SchoolMaster.Application.Repositories;
 using SchoolMaster.Domain.Entities;
 using SchoolMaster.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+
 public class AcademicYearRepository : IAcademicYearRepository
 {
     private readonly SchoolMasterContext _context;
@@ -25,7 +26,11 @@ public class AcademicYearRepository : IAcademicYearRepository
         var totalCount = await _context.AcademicYears.CountAsync();
         var items = await _context.AcademicYears
             .OrderByDescending(y => y.StartDate)
+            // each page contains pageSize number of academic years
+            // this skips pages depending on your preference. i.e if you set Page = 2 and PageSize = 10
+            // it skips one page AKA 10 academic years since a Page has PageSize number of items
             .Skip((page - 1) * pageSize)
+            // then takes the next page(pageSize amount of items)
             .Take(pageSize)
             .ToListAsync();
         return (items, totalCount);
