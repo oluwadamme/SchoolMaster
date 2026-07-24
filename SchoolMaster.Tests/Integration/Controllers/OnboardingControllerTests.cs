@@ -49,8 +49,8 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
         var response = await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req);
         response.EnsureSuccessStatusCode();
 
-        var body = await response.Content.ReadFromJsonAsync<BaseResponse<Guid>>();
-        return (req.Subdomain, body!.Data, req.AdminEmail);
+        var body = await response.Content.ReadFromJsonAsync<BaseResponse<OnboardTenantResponse>>();
+        return (req.Subdomain, body!.Data!.TenantId, req.AdminEmail);
     }
 
     private HttpRequestMessage BuildRequest(HttpMethod method, string url, object body, string subdomain)
@@ -72,9 +72,11 @@ public class OnboardingControllerTests : IClassFixture<SchoolMasterWebApplicatio
         var response = await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<BaseResponse<Guid>>();
+        var body = await response.Content.ReadFromJsonAsync<BaseResponse<OnboardTenantResponse>>();
         Assert.True(body!.Success);
-        Assert.NotEqual(Guid.Empty, body.Data);
+        Assert.NotNull(body.Data);
+        Assert.NotEqual(Guid.Empty, body.Data.TenantId);
+        Assert.Equal(req.Subdomain, body.Data.Subdomain);
     }
 
     [Fact]

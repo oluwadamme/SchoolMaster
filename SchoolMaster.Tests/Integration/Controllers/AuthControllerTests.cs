@@ -51,8 +51,8 @@ public class AuthControllerTests : IClassFixture<SchoolMasterWebApplicationFacto
 
         var onboardResponse = await _client.PostAsJsonAsync("/api/v1/onboarding/tenants", req);
         onboardResponse.EnsureSuccessStatusCode();
-        var body = await onboardResponse.Content.ReadFromJsonAsync<BaseResponse<Guid>>();
-        var tenantId = body!.Data;
+        var body = await onboardResponse.Content.ReadFromJsonAsync<BaseResponse<OnboardTenantResponse>>();
+        var tenantId = body!.Data!.TenantId;
 
         // Verify email so the user transitions to Active — required for login.
         var verifyMsg = new HttpRequestMessage(HttpMethod.Post, "/api/v1/onboarding/verify-email")
