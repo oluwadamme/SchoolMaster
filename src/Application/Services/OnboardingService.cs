@@ -19,24 +19,24 @@ public class OnboardingService : IOnboardingService
     private readonly ITenantRepository _tenantRepository;
     private readonly IUserRepository _userRepository;
     private readonly IOptions<EmailVerificationOptions> _emailOptions;
-    private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly ICurrentTenant _currentTenant;
     private readonly IOtpService _otpService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public OnboardingService(
         ITenantRepository tenantRepository,
         IUserRepository userRepository,
         IOptions<EmailVerificationOptions> emailOptions,
-        IBackgroundJobClient backgroundJobClient,
         ICurrentTenant currentTenant,
-       IOtpService otpService)
+       IOtpService otpService,
+       IUnitOfWork unitOfWork)
     {
         _tenantRepository = tenantRepository;
         _userRepository = userRepository;
         _emailOptions = emailOptions;
-        _backgroundJobClient = backgroundJobClient;
         _currentTenant = currentTenant;
         _otpService = otpService;
+        _unitOfWork = unitOfWork;
 
     }
 
@@ -115,6 +115,10 @@ public class OnboardingService : IOnboardingService
             {
                 user.RegisterFailedOtpAttempt();
                 await _userRepository.UpdateUserAsync(user);
+                // Commit the increment here: the throw below prevents UnitOfWorkFilter from committing
+                // (it only saves when the action returns without an exception), so without this explicit
+                // save every failed guess would be discarded and the attempt cap would never trigger.
+                await _unitOfWork.SaveChangesAsync();
             }
 
             throw new InvalidOtpException("Invalid OTP or Email address.");
@@ -130,12 +134,7 @@ public class OnboardingService : IOnboardingService
     public async Task<BaseResponse<bool>> ResendVerificationOtpAsync(ResendOtpRequest request)
     {
         var tenantId = _currentTenant.Id;
-        if (tenantId == Guid.Empty)
-        {
-            Log.Warning("Verification flow invoked with no resolved tenant.");
 
-            return BaseResponse<bool>.SuccessResponse("Otp sent successfully", true);
-        }
         var user = await _userRepository.GetUserByEmailAsync(request.Email);
         if (user == null)
         {
