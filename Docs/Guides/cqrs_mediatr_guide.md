@@ -13,8 +13,8 @@ As your app grows, `AuthService` will become massive. Every time a developer nee
 **CQRS** stands for **Command Query Responsibility Segregation**. 
 
 It is a simple rule that states your application should be split into two strict halves:
-1. **Queries (Reads):** Code that asks for data. It *never* modifies the database. (e.g., "Give me a list of books").
-2. **Commands (Writes):** Code that changes data (Insert, Update, Delete). It typically does not return a lot of data, maybe just a success flag or the new ID. (e.g., "Create this book" or "Reset my password").
+1. **Queries (Reads):** Code that asks for data. It *never* modifies the database. (e.g., "Give me a list of students").
+2. **Commands (Writes):** Code that changes data (Insert, Update, Delete). It typically does not return a lot of data, maybe just a success flag or the new ID. (e.g., "Enroll this student" or "Reset my password").
 
 By splitting these up, you allow your "Read" operations to be incredibly fast (maybe reading from a fast Cache), while your "Write" operations can handle all the complex validation and database saving logic safely without stepping on each other's toes.
 
@@ -24,7 +24,7 @@ By splitting these up, you allow your "Read" operations to be incredibly fast (m
 
 Think of MediatR like a Traffic Cop or a Post Office.
 
-Instead of your `BooksController` directly talking to a `BookService`, it hands a letter to the Postmaster (MediatR), and says: *"Hey, here is a request to get a book. Deliver this to whoever is responsible for it."*
+Instead of your `StudentsController` directly talking to a `StudentService`, it hands a letter to the Postmaster (MediatR), and says: *"Hey, here is a request to get a student. Deliver this to whoever is responsible for it."*
 
 MediatR looks at the letter, finds the exact single class responsible for handling it, gives it the letter, gets the result, and hands it back to the Controller.
 
@@ -32,7 +32,7 @@ MediatR looks at the letter, finds the exact single class responsible for handli
 
 ## 3. How It Looks in .NET (The Concept)
 
-If you installed MediatR into `FirstApi`, your big `BookService.cs` class gets completely deleted. Instead, every single API operation gets its very own isolated class (known as a **Handler**).
+If you installed MediatR into `SchoolMaster`, your big `StudentService.cs` class gets completely deleted. Instead, every single API operation gets its very own isolated class (known as a **Handler**).
 
 This enforces the **Single Responsibility Principle**. 
 
@@ -40,31 +40,34 @@ This enforces the **Single Responsibility Principle**.
 First, you define the "Letter" (The Query) you want to send.
 
 ```csharp
-// This is simply a C# Record that says: "I want a Book, and here is the ID I'm looking for."
-public record GetBookByIdQuery(int BookId, int UserId) : IRequest<BaseResponse<Book>>;
+// This is simply a C# Record that says: "I want a Student, and here is the ID I'm looking for."
+public record GetStudentByIdQuery(Guid StudentId) : IRequest<BaseResponse<StudentDto>>;
 ```
 
 ### Step 2: Create a Handler (The Code)
 Next, you write a dedicated class to handle *only* this specific query. It gets its own dependencies injected specifically for this single task.
 
 ```csharp
-public class GetBookByIdQueryHandler : IRequestHandler<GetBookByIdQuery, BaseResponse<Book>>
+public class GetStudentByIdQueryHandler : IRequestHandler<GetStudentByIdQuery, BaseResponse<StudentDto>>
 {
-    private readonly FirstApiContext _db;
+    private readonly SchoolMasterContext _db;
 
-    public GetBookByIdQueryHandler(FirstApiContext db)
+    public GetStudentByIdQueryHandler(SchoolMasterContext db)
     {
         _db = db;
     }
 
-    public async Task<BaseResponse<Book>> Handle(GetBookByIdQuery request, CancellationToken cancellationToken)
+    public async Task<BaseResponse<StudentDto>> Handle(GetStudentByIdQuery request, CancellationToken cancellationToken)
     {
-        // 1. Do the database work and ownership check
-        var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == request.BookId);
-        if (book == null || book.UserId != request.UserId) 
-            throw new KeyNotFoundException("Book not found.");
+        // 1. Do the database work and multi-tenant check
+        var student = await _db.Students
+            .ProjectTo<StudentDto>(_mapper.ConfigurationProvider)
+            .FirstOrDefaultAsync(b => b.Id == request.StudentId);
+            
+        if (student == null) 
+            throw new KeyNotFoundException("Student not found.");
 
-        return BaseResponse<Book>.SuccessResponse("Success", book);
+        return BaseResponse<StudentDto>.SuccessResponse("Success", student);
     }
 }
 ```
@@ -74,23 +77,21 @@ Your controllers become incredibly "thin." They don't need to inject 10 differen
 
 ```csharp
 [ApiController]
-[Route("api/[controller]")]
-public class BooksController : ControllerBase
+[Route("api/v1/[controller]")]
+public class StudentsController : ControllerBase
 {
     private readonly IMediator _mediator; // <-- The Postmaster!
 
-    public BooksController(IMediator mediator)
+    public StudentsController(IMediator mediator)
     {
         _mediator = mediator;
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetBook(int id)
+    public async Task<IActionResult> GetStudent(Guid id)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-        
-        // You just hand MediatR the letter. It magically finds your handler and returns the book!
-        var response = await _mediator.Send(new GetBookByIdQuery(id, userId));
+        // You just hand MediatR the letter. It magically finds your handler and returns the student!
+        var response = await _mediator.Send(new GetStudentByIdQuery(id));
 
         return Ok(response);
     }
@@ -106,15 +107,15 @@ If you implement CQRS and MediatR, your application will scale beautifully.
 Instead of a giant `AuthService.cs` file with 500 lines of code, your folder structure will look extremely clean and organized, like this:
 ```text
 /Features
-    /Books
+    /Students
         /Queries
-            GetBookByIdQuery.cs
-            GetAllBooksQuery.cs
+            GetStudentByIdQuery.cs
+            GetAllStudentsQuery.cs
         /Commands
-            CreateBookCommand.cs
-            DeleteBookCommand.cs
+            EnrollStudentCommand.cs
+            WithdrawStudentCommand.cs
 ```
 
-If a bug happens during Book Creation, you know *exactly* which single file (`CreateBookCommand.cs`) the issue is in, without having to dig through massive God classes!
+If a bug happens during Student Enrollment, you know *exactly* which single file (`EnrollStudentCommand.cs`) the issue is in, without having to dig through massive God classes!
 
 However, just like Clean Architecture, **it adds a lot of files and boilerplate**. For every single API endpoint you build, you must write at least two new files (The Request, and the Handler). If you value having all your logic visible in one place (like your current `Service` layer), CQRS might feel tedious.

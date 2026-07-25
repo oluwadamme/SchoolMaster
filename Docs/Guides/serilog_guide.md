@@ -2,15 +2,15 @@
 
 Right now, if you use the default `ILogger` built into .NET to track an error, it often looks something like this:
 ```csharp
-_logger.LogError($"Failed to send email to {user.Email} at {DateTime.UtcNow}");
+_logger.LogError($"Failed to enroll student {student.Id} at {DateTime.UtcNow}");
 ```
 
 If your application prints this to the terminal, it generates a plain text string:
-`[Error] Failed to send email to alice@example.com at 10:42 PM`
+`[Error] Failed to enroll student STU-2024-00142 at 10:42 PM`
 
 ### The Problem with Plain Text
 Imagine running a massive production API for 6 months. You now have **3 million lines of plain text in a log file**.
-Suddenly, you notice Alice isn't receiving emails. You have to open the massive 5-gigabyte text file, hit `Ctrl+F`, and try to type `"Failed to send email to alice@example.com"` and furiously click "Next" hoping you find the exact error. 
+Suddenly, you notice a student enrollment failed. You have to open the massive 5-gigabyte text file, hit `Ctrl+F`, and try to type `"Failed to enroll student STU-2024-00142"` and furiously click "Next" hoping you find the exact error. 
 It is a nightmare to debug.
 
 ## 1. Enter Structured Logging
@@ -22,23 +22,23 @@ Using a structured logger, your log actually looks like this behind the scenes:
 {
   "Timestamp": "2026-04-10T10:42:00Z",
   "Level": "Error",
-  "MessageTemplate": "Failed to send email to {UserEmail}",
+  "MessageTemplate": "Failed to enroll student {StudentId}",
   "Properties": {
-    "UserEmail": "alice@example.com",
+    "StudentId": "STU-2024-00142",
     "Environment": "Production"
   }
 }
 ```
 
 Because it's JSON, you can throw these logs into a database or a log viewer and run magical queries like:
-* *"Show me all `Error` logs where `UserEmail == 'alice@example.com'` in the last 24 hours."*
+* *"Show me all `Error` logs where `StudentId == 'STU-2024-00142'` in the last 24 hours."*
 * *"Graph the number of `Warning` logs per minute."*
 
 ## 2. What is Serilog?
 
 **Serilog** is the undisputed king of structured logging in .NET.
 
-It works perfectly with the standard `ILogger<T>` interfaces you are already using in `AuthService.cs`, but it completely hijacks what happens when you call `_logger.LogError()`.
+It works perfectly with the standard `ILogger<T>` interfaces you are already using in your services, but it completely hijacks what happens when you call `_logger.LogError()`.
 
 ### Sinks (Where the logs go)
 Serilog uses the concept of **Sinks**. A Sink is a destination for your logs. 
@@ -91,7 +91,7 @@ finally
 ```
 
 ### Step 3: Write Queryable Logs
-You don't need to change `AuthService.cs` injections. You just change *how* you write the string!
+You don't need to change your service injections. You just change *how* you write the string!
 
 **DO NOT use string interpolation (`$`) anymore!** 
 If using `$`, it flattens the string into plain text. You must use Serilog's bracket syntax `{Property}` so it knows how to build the JSON.

@@ -1,10 +1,10 @@
 # API Versioning: A Beginner's Guide
 
-Imagine your `FirstApi` becomes a massive success. Thousands of mobile apps and websites are using your endpoints to fetch books. 
+Imagine your `SchoolMaster` becomes a massive success. Thousands of mobile apps and websites are using your endpoints to fetch students. 
 
-One day, you decide to restructure the data format of a Book. Instead of `'author': 'F. Scott Fitzgerald'`, you want to split it into `'author': { 'firstName': 'F. Scott', 'lastName': 'Fitzgerald' }`. 
+One day, you decide to restructure the data format of a Student. Instead of `'fullName': 'John Doe'`, you want to split it into `'name': { 'firstName': 'John', 'lastName': 'Doe' }`. 
 
-If you just change the code and deploy it, **every app using your API will instantly crash** because it expects a single string for 'author', not an object. 
+If you just change the code and deploy it, **every app using your API will instantly crash** because it expects a single string for 'fullName', not an object. 
 
 This is what we call a **"Breaking Change."**
 
@@ -19,10 +19,10 @@ When a mobile app sends a GET request to your API, how does it tell you *which* 
 ### 1. URL Path Versioning (Most Common)
 You put the version number directly inside the URL. 
 - **Pros:** It's incredibly obvious just by looking at the URL. You can easily test it in a browser.
-- **Cons:** Technically violates REST purist rules (because the URL should represent the *resource*, like a "Book", not the "Version of a Book").
+- **Cons:** Technically violates REST purist rules (because the URL should represent the *resource*, like a "Student", not the "Version of a Student").
 ```http
-GET https://api.yourdomain.com/api/v1/books
-GET https://api.yourdomain.com/api/v2/books
+GET https://api.yourdomain.com/api/v1/students
+GET https://api.yourdomain.com/api/v2/students
 ```
 
 ### 2. Query String Versioning (The Default in .NET)
@@ -30,8 +30,8 @@ You append the version parameter to the end of the URL.
 - **Pros:** Extremely easy to configure. Doesn't break existing routes.
 - **Cons:** Can make URLs messy.
 ```http
-GET https://api.yourdomain.com/api/books?api-version=1.0
-GET https://api.yourdomain.com/api/books?api-version=2.0
+GET https://api.yourdomain.com/api/students?api-version=1.0
+GET https://api.yourdomain.com/api/students?api-version=2.0
 ```
 
 ### 3. Header Versioning
@@ -39,15 +39,15 @@ The URL stays completely clean, but the client must send a custom HTTP header in
 - **Pros:** Very clean URLs. Satisfies REST purists.
 - **Cons:** Harder to test. You can't just copy/paste a URL to a friend, because the version is hidden in the request headers.
 ```http
-GET https://api.yourdomain.com/api/books
+GET https://api.yourdomain.com/api/students
 X-Api-Version: 2.0
 ```
 
 ### 4. MediaType / Accept Header Versioning (Advanced)
 Similar to headers, but it modifies the standard `Accept` header. Usually used at massive scale (like GitHub's API).
 ```http
-GET https://api.yourdomain.com/api/books
-Accept: application/vnd.firstapi.v2+json
+GET https://api.yourdomain.com/api/students
+Accept: application/vnd.schoolmaster.v2+json
 ```
 
 ---
@@ -87,11 +87,11 @@ You tag your controllers to tell the router which version they belong to. You ca
 [ApiController]
 [Route("api/v{version:apiVersion}/[controller]")]
 [ApiVersion("1.0", Deprecated = true)] // Tag it as deprecated so developers know to upgrade!
-public class BooksController : ControllerBase
+public class StudentsController : ControllerBase
 {
-    // This returns { author: "F. Scott" }
+    // This returns { fullName: "John Doe" }
     [HttpGet]
-    public IActionResult GetV1Books() { ... }
+    public IActionResult GetV1Students() { ... }
 }
 ```
 
@@ -100,11 +100,11 @@ public class BooksController : ControllerBase
 [ApiController]
 [Route("api/v{version:apiVersion}/[controller]")]
 [ApiVersion("2.0")] 
-public class BooksV2Controller : ControllerBase
+public class StudentsV2Controller : ControllerBase
 {
-    // This returns { author: { first: "F.", last: "Scott" } }
+    // This returns { name: { first: "John", last: "Doe" } }
     [HttpGet]
-    public IActionResult GetV2Books() { ... }
+    public IActionResult GetV2Students() { ... }
 }
 ```
 

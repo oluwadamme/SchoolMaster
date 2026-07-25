@@ -1,16 +1,16 @@
 # Problem Details (RFC 7807): A Beginner's Guide
 
-Right now, if a user queries a book that doesn't exist, your `ExceptionMiddleware.cs` catches the `KeyNotFoundException` and returns a custom JSON object using your `BaseResponse` wrapper:
+Right now, if a user queries a student that doesn't exist, your `ExceptionMiddleware.cs` catches the `KeyNotFoundException` and returns a custom JSON object using your `BaseResponse` wrapper:
 
 ```json
 {
   "success": false,
-  "message": "Book not found",
+  "message": "Student not found",
   "data": null
 }
 ```
 
-This is fine, but it creates a problem for the developers building mobile apps and websites that consume your API. If they switch to a different API, that new API might format errors entirely differently (e.g., `{"error": "Book not found", "code": 404 }`). Mobile developers hate having to write custom error-parsing logic for every single API they use.
+This is fine, but it creates a problem for the developers building mobile apps and websites that consume your API. If they switch to a different API, that new API might format errors entirely differently (e.g., `{"error": "Student not found", "code": 404 }`). Mobile developers hate having to write custom error-parsing logic for every single API they use.
 
 **Problem Details for HTTP APIs (RFC 7807)** is an internet standard. It is a globally agreed-upon JSON format specifically designed for HTTP errors.
 
@@ -25,15 +25,15 @@ Instead of inventing your own error format, RFC 7807 dictates you must return a 
   "type": "https://tools.ietf.org/html/rfc7231#section-6.5.4",
   "title": "Not Found",
   "status": 404,
-  "detail": "The book with ID 5 was not found.",
-  "instance": "/api/books/5"
+  "detail": "The student with ID 5 was not found.",
+  "instance": "/api/v1/students/5"
 }
 ```
 
 - **`type`**: A URL pointing to human-readable documentation about the error type.
 - **`title`**: A short, recognizable summary of the problem (usually matching the HTTP Status code name).
 - **`status`**: The HTTP status code (so clients don't have to check the HTTP headers to find it).
-- **`detail`**: A specific, human-readable explanation of *exactly* what went wrong (e.g., "The book was not found").
+- **`detail`**: A specific, human-readable explanation of *exactly* what went wrong (e.g., "The student was not found").
 - **`instance`**: The exact URL/route that caused the error.
 
 ### Extensions
@@ -120,4 +120,4 @@ public class ExceptionMiddleware
 
 Switching to Problem Details is considered a **Best Practice** for modern Web APIs. 
 
-While `BaseResponse` is great for successful requests where you want to wrap your data (e.g., returning the `Book` or `UserDto`), using `ProblemDetails` for errors allows tools, browsers, and mobile apps to automatically understand and easily parse the exact cause of an error using recognized internet standards!
+While `BaseResponse` is great for successful requests where you want to wrap your data (e.g., returning the `Student` or `StaffDto`), using `ProblemDetails` for errors allows tools, browsers, and mobile apps to automatically understand and easily parse the exact cause of an error using recognized internet standards!

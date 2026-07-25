@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # ------------- PostgreSQL Database -------------
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=schoolmaster
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ------------- Redis (Cache + Hangfire) -------------
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+
+  # ------------- SchoolMaster API -------------
+  api:
+    build: 
+      context: .
+      target: build
+    ports:
+      - "7001:8080"
+    volumes:
+      - .:/src
+      - /src/bin
+      - /src/obj
+    working_dir: /src
+    command: dotnet watch run --project SchoolMaster.csproj --urls http://0.0.0.0:8080
+    depends_on:
+      db:
+        condition: service_healthy
+      # redis:
+      #   condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+      - ConnectionStrings__DefaultConnection=Server=db;Port=5432;Database=schoolmaster;Username=postgres;Password=postgres
+      # - ConnectionStrings__Redis=redis:6379
+
+volumes:
+  pgdata:

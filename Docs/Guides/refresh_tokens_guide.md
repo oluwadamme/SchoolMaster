@@ -19,11 +19,11 @@ User logs in → gets JWT (60 min) + Refresh Token (7 days)
                     ↓
          JWT expires after 60 min
                     ↓
-    Client sends refresh token to /api/Auth/refresh
+     Client sends refresh token to /api/v1/auth/refresh-token
                     ↓
-      Server validates it → issues NEW JWT + NEW refresh token
+       Server validates it → issues NEW JWT + NEW refresh token
                     ↓
-          User continues without interruption
+           User continues without interruption
 ```
 
 ## Access Token vs Refresh Token
@@ -33,7 +33,7 @@ User logs in → gets JWT (60 min) + Refresh Token (7 days)
 | **Purpose** | Authorize API requests | Get new access tokens |
 | **Lifetime** | Short (15-60 min) | Long (7-30 days) |
 | **Stored where** | Memory / app state | Secure storage (HttpOnly cookie, Keychain) |
-| **Sent with** | Every API request | Only to `/refresh` endpoint |
+| **Sent with** | Every API request | Only to `/refresh-token` endpoint |
 | **Format** | JWT (self-contained, has claims) | Opaque random string |
 | **Validated how** | Signature check (stateless) | Database lookup (stateful) |
 
@@ -64,7 +64,7 @@ If a revoked refresh token is used, it could mean the token was stolen. A parano
 ┌─────────────────────────────────────────────────────────┐
 │                    INITIAL LOGIN                         │
 │                                                         │
-│  POST /api/Auth/login                                   │
+│  POST /api/v1/auth/login                                │
 │  { email, password }                                    │
 │         ↓                                               │
 │  Response: {                                            │
@@ -78,7 +78,7 @@ If a revoked refresh token is used, it could mean the token was stolen. A parano
 ┌─────────────────────────────────────────────────────────┐
 │                   TOKEN REFRESH                          │
 │                                                         │
-│  POST /api/Auth/refresh                                 │
+│  POST /api/v1/auth/refresh-token                        │
 │  { refreshToken: "a8Kx9..." }                          │
 │         ↓                                               │
 │  Server checks DB → valid + not expired                 │
@@ -86,6 +86,17 @@ If a revoked refresh token is used, it could mean the token was stolen. A parano
 │  Response: {                                            │
 │    token: "eyJnew...",        ← NEW JWT                 │
 │    refreshToken: "b7Zy3...", ← NEW refresh token        │
+│    }                                                    │
+│  (old refresh token "a8Kx9..." is now invalid)          │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+### In Summary
+
+Refresh tokens allow you to keep your access tokens short-lived (secure) while providing a seamless user experience (no constant re-logging). Combined with **rotation**, they provide a robust security model for modern web applications.
+ NEW refresh token        │
 │    }                                                    │
 │  (old refresh token "a8Kx9..." is now invalid)          │
 └─────────────────────────────────────────────────────────┘

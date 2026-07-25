@@ -1,12 +1,12 @@
 # Refresh Token Family Tracking: A Beginner's Guide
 
-You already implemented **Refresh Token Rotation**. When a user logs in, they get an Access Token (lasts 15 minutes) and a Refresh Token (lasts 30 days). When they use their Refresh Token, you delete it and generate a brand-new one.
+You already implemented **Refresh Token Rotation**. When a user logs in, they get an Access Token (lasts 60 minutes) and a Refresh Token (lasts 30 days). When they use their Refresh Token, you delete it and generate a brand-new one.
 
 This is highly secure... until we introduce **The Hacker**.
 
 ## 1. The Vulnerability 
 
-Imagine Alice logs into your app on her phone. She is issued `RefreshToken_A`.
+Imagine parent Alice logs into your app on her phone. She is issued `RefreshToken_A`.
 A hacker intercepts her HTTP traffic at a coffee shop and secretly copies `RefreshToken_A`.
 
 **The Hacker strikes first:** 

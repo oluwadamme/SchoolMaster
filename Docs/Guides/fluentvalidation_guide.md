@@ -1,16 +1,16 @@
 # FluentValidation: A Beginner's Guide
 
-Right now, if you look at how you validate data in `FirstApi`, you likely do one of two things:
+Right now, if you look at how you validate data in `SchoolMaster`, you likely do one of two things:
 
-**1. Manual `if` statements in your Service or Controller:**
+**1. Manual `if` statements in your Service or Handler:**
 ```csharp
-public async Task RegisterUser(RegisterRequest request)
+public async Task EnrollStudent(EnrollStudentRequest request)
 {
-    if (string.IsNullOrWhiteSpace(request.Email))
-        throw new ArgumentException("Email is required");
+    if (string.IsNullOrWhiteSpace(request.FirstName))
+        throw new ArgumentException("First name is required");
         
-    if (request.Password.Length < 6)
-        throw new ArgumentException("Password too short");
+    if (request.DateOfBirth > DateTime.UtcNow.AddYears(-3))
+        throw new ArgumentException("Student must be at least 3 years old");
         
     // ... logic
 }
@@ -18,19 +18,17 @@ public async Task RegisterUser(RegisterRequest request)
 
 **2. Data Annotations on your DTOs:**
 ```csharp
-public class RegisterRequest
+public class EnrollStudentRequest
 {
     [Required]
-    [EmailAddress]
-    public string Email { get; set; }
+    public string FirstName { get; set; }
 
     [Required]
-    [MinLength(6)]
-    public string Password { get; set; }
+    public DateTime DateOfBirth { get; set; }
 }
 ```
 
-While Data Annotations are okay for simple apps, they tightly couple your validation rules to your data models. If you have complex validation (e.g., "Password requires a special character only if they are an admin"), Annotations become almost impossible to use cleanly.
+While Data Annotations are okay for simple apps, they tightly couple your validation rules to your data models. If you have complex validation (e.g., "Student must have a guardian phone number if they are under 18"), Annotations become almost impossible to use cleanly.
 
 ## Enter FluentValidation
 
@@ -40,32 +38,34 @@ Instead of writing `if` statements or scattering `[Required]` attributes everywh
 
 ### The "After" Example
 
-Here is exactly how `RegisterRequest` validation looks using FluentValidation:
+Here is exactly how `EnrollStudentRequest` validation looks using FluentValidation:
 
 ```csharp
 using FluentValidation;
 
 // 1. The DTO is now a "pure" data bag. No attributes!
-public class RegisterRequest
+public class EnrollStudentRequest
 {
-    public string Email { get; set; }
-    public string Password { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public DateTime DateOfBirth { get; set; }
 }
 
 // 2. The dedicated Validator class
-public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
+public class EnrollStudentValidator : AbstractValidator<EnrollStudentRequest>
 {
-    public RegisterRequestValidator()
+    public EnrollStudentValidator()
     {
-        RuleFor(user => user.Email)
-            .NotEmpty().WithMessage("You must enter an email.")
-            .EmailAddress().WithMessage("That is not a valid email format.");
+        RuleFor(x => x.FirstName)
+            .NotEmpty().WithMessage("First name is required.")
+            .MaximumLength(50).WithMessage("First name cannot exceed 50 characters.");
 
-        RuleFor(user => user.Password)
+        RuleFor(x => x.LastName)
+            .NotEmpty().WithMessage("Last name is required.");
+
+        RuleFor(x => x.DateOfBirth)
             .NotEmpty()
-            .MinimumLength(6).WithMessage("Password must be at least 6 characters.")
-            .Matches("[A-Z]").WithMessage("Password must contain 1 uppercase letter.")
-            .Matches("[0-9]").WithMessage("Password must contain 1 number.");
+            .LessThan(DateTime.UtcNow.AddYears(-3)).WithMessage("Student must be at least 3 years old.");
     }
 }
 ```
@@ -73,18 +73,18 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 ## Why is this so much better?
 
 ### 1. Separation of Concerns
-Your `RegisterRequest` class just holds data. Your `AuthService` class just handles pure business logic. Your `RegisterRequestValidator` just handles validation. The responsibilities are perfectly isolated!
+Your `EnrollStudentRequest` class just holds data. Your handler just handles pure business logic. Your `EnrollStudentValidator` just handles validation. The responsibilities are perfectly isolated!
 
 ### 2. Extremely Powerful Rules
-FluentValidation supports heavy business rules. Let's say you have a `Book` and you want to ensure the `YearPublished` isn't in the future:
+FluentValidation supports heavy business rules. Let's say you have an `AttendanceRecord` and you want to ensure the `Status` is valid:
 ```csharp
-RuleFor(book => book.YearPublished)
-    .LessThanOrEqualTo(DateTime.UtcNow.Year)
-    .WithMessage("A book cannot be published in the future!");
+RuleFor(x => x.Status)
+    .Must(status => new[] { "Present", "Absent", "Late", "Excused" }.Contains(status))
+    .WithMessage("Invalid attendance status.");
 ```
 
 ### 3. ASP.NET Core Magic
-When you register FluentValidation in `Program.cs`, it hooks into the ASP.NET Core pipeline. If the rules fail, the request **never even reaches your controller**. It automatically returns an elegant `400 Bad Request` containing a list of exactly which fields failed and why. 
+When you register FluentValidation in `Program.cs`, it hooks into the ASP.NET Core pipeline. If the rules fail, the request **never even reaches your handler**. It automatically returns an elegant `400 Bad Request` containing a list of exactly which fields failed and why. 
 
 ### In Summary
-If you are tired of cluttering your `AuthService` with 20 lines of `if (string.IsNullOrEmpty(...))` checks, FluentValidation is the ultimate modernization tool for your `.NET` backend.
+If you are tired of cluttering your handlers with 20 lines of `if (string.IsNullOrEmpty(...))` checks, FluentValidation is the ultimate modernization tool for your `.NET` backend.

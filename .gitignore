@@ -52,7 +52,6 @@ artifacts/
 *.sln.iml
 
 bin/
-Migrations/
 
 # VS Code
 .vscode/*
@@ -99,3 +98,8 @@ Desktop.ini
 
 # Linux
 *~
+src/Api/appsettings.json
+.vscode/
+
+reports/
+logs_*

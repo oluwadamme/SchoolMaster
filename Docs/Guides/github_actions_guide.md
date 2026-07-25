@@ -1,8 +1,8 @@
 # CI/CD with GitHub Actions: A Beginner's Guide
 
-Imagine you are working on a team. You just finished building a huge new feature for your `FirstApi`. You push your code to GitHub, and your teammate immediately merges it. 
+Imagine you are working on a team. You just finished building a huge new feature for your `SchoolMaster`. You push your code to GitHub, and your teammate immediately merges it. 
 
-Ten minutes later, production is down. It turns out you missed a semicolon in `BookService.cs`, and the tests were failing locally, but you forgot to run `dotnet test` before pushing.
+Ten minutes later, production is down. It turns out you missed a semicolon in `StudentService.cs`, and the tests were failing locally, but you forgot to run `dotnet test` before pushing.
 
 **CI/CD (Continuous Integration / Continuous Deployment)** is the process of automating checks and deployments so human errors like that never happen.
 
@@ -32,7 +32,7 @@ There are three main parts to a GitHub Action:
 
 ## 3. How It Works For .NET (The Concept)
 
-If you were to set this up for `FirstApi`, you would create a file called `.github/workflows/dotnet.yml`.
+If you were to set this up for `SchoolMaster`, you would create a file called `.github/workflows/dotnet.yml`.
 
 Here is a heavily commented conceptual example of what that file looks like:
 
@@ -65,7 +65,7 @@ jobs:
       with:
         dotnet-version: 10.0.x
 
-    # Step C: Download all NuGet packages (MailKit, Npgsql, EF Core, etc.)
+    # Step C: Download all NuGet packages (MailKit, Npgsql, EF Core, MediatR, etc.)
     - name: Restore dependencies
       run: dotnet restore
 

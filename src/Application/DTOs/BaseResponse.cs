@@ -1,5 +1,13 @@
 namespace SchoolMaster.Application.DTOs;
 
+public record PagedResponse<T>(
+    List<T> Items,
+    int Page,
+    int PageSize,
+    int TotalCount,
+    int TotalPages
+);
+
 public class BaseResponse<T>
 {
     public bool Success { get; set; }

@@ -1,6 +1,6 @@
 # Rate Limiting: A Beginner's Guide
 
-Imagine your `FirstApi` corresponds to a hugely popular application. What happens if a malicious hacker writes a script that rapidly attempts to guess a user's password?
+Imagine your `SchoolMaster` corresponds to a hugely popular application. What happens if a malicious hacker writes a script that rapidly attempts to guess a user's password?
 ```
 Attempt 1: password123
 Attempt 2: password1234
@@ -39,7 +39,7 @@ This is specifically used to prevent your server from running out of RAM or CPU 
 
 For years, developers had to use third-party libraries (like `AspNetCoreRateLimit`) for this. But since .NET 7, Microsoft built it directly into the framework using the `Microsoft.AspNetCore.RateLimiting` middleware.
 
-Here is how you would conceptually implement Rate Limiting in your `FirstApi`.
+Here is how you would conceptually implement Rate Limiting in your `SchoolMaster` API.
 
 ### Step 1: Configure it in `Program.cs`
 You decide what "Policies" you want to enforce. For instance, you might want a strict policy for Auth endpoints (to stop brute-force hacking), but a looser policy for GET endpoints.
@@ -78,7 +78,7 @@ You just drop a tag over the endpoints you want to protect.
 
 ```csharp
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 public class AuthController : ControllerBase
 {
     // Force the user to obey the "AuthLimit" policy!
@@ -92,7 +92,7 @@ public class AuthController : ControllerBase
 ```
 
 ### The Result
-If a user hits your `/api/Auth/login` endpoint 6 times in a single minute, the 6th request never reaches your Controller code. The `UseRateLimiter()` middleware automatically intercepts it and returns a `429 Too Many Requests` HTTP error code!
+If a user hits your `/api/v1/Auth/login` endpoint 6 times in a single minute, the 6th request never reaches your Controller code. The `UseRateLimiter()` middleware automatically intercepts it and returns a `429 Too Many Requests` HTTP error code!
 
 ---
 
