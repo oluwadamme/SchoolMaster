@@ -21,6 +21,15 @@
 
 ### Phase 1 Features
 
+> **What's shipped vs. what's planned**
+>
+> - **✓ Complete (live in the API today):** authentication & RBAC, school onboarding, student enrollment (including bulk), staff profiles & invitations (including bulk), academic setup (years, terms, classes, subjects), timetable management, and daily attendance with automated absence notifications.
+> - **🛣️ Roadmap (not yet implemented):** subject assignment, leave requests, attendance analytics & reporting, CSV import/export, and file/photo uploads.
+
+> Endpoints marked **[Roadmap]** in the tables below are designed but not yet built — they are documented here so the intended API surface is clear. Everything unmarked is implemented and callable against the live base URL.
+
+#### ✓ Complete
+
 - **Multi-Role Authentication** — JWT + refresh token auth with rotation, BCrypt password hashing, OTP email verification, and password reset flow. Supports Admin, Teacher, Student, Parent, and Staff roles.
 - **Role-Based Access Control (RBAC)** — Fine-grained permissions per role (`RolePermissions.cs`). Each endpoint enforces ownership and role boundaries. No cross-tenant data leakage.
 - **Rate Limiting** — Fixed window rate limiter on all onboarding and authentication endpoints to prevent brute-force attacks (5 requests/minute per IP).
@@ -42,6 +51,16 @@
 - **Automated Testing** — Unit tests (xUnit + Moq) for all service and command handler logic. Integration tests using `WebApplicationFactory` + Testcontainers (real PostgreSQL).
 - **CI/CD** — GitHub Actions: build → test → push Docker image → deploy on every push to `develop` and PR to `main`.
 - **Docker Support** — Multi-stage Dockerfile and `docker-compose.yml` with PostgreSQL and Redis side by side.
+
+#### 🛣️ Roadmap
+
+- **Student & Staff Directory** — List, get, update, and withdraw/deactivate endpoints with pagination and filtering.
+- **Subject Assignment** — Map teachers to the subjects they teach.
+- **Leave Requests** — Staff submit leave requests; admins approve or reject.
+- **Attendance Analytics** — Filtered reports, low-attendance alerts, and per-class weekly heatmaps.
+- **CSV Import/Export** — Multipart CSV upload for bulk enrollment (the current bulk endpoints take a JSON array) and CSV export for attendance reports.
+- **File Uploads** — Student/staff photos backed by Azure Blob or S3.
+- **Push Notifications** — Parent mobile push via Firebase Cloud Messaging.
 
 ---
 
@@ -71,15 +90,51 @@
 
 ---
 
-### Phase 1 Project Structure
-
-### Architecture
+### Phase 1 Architecture
 
 The application follows an N-Tier architecture (Controller → Service → Repository → Database).
+
+```mermaid
+flowchart TB
+    Client["🖥️ Client<br/>(Swagger / Web / Mobile)"]
+
+    subgraph API["SchoolMaster.Api"]
+        MW["Middleware Pipeline<br/>Error Handling → Rate Limiting →<br/>JWT Auth → Tenant Resolution"]
+        Ctrl["Controllers<br/>Onboarding · Auth · Students ·<br/>Staff · Academic · Attendance"]
+    end
+
+    subgraph App["SchoolMaster.Application"]
+        Val["FluentValidation<br/>(request DTOs)"]
+        Svc["Services<br/>(business logic + RBAC checks)"]
+        Evt["MediatR Domain Events"]
+        Repo["Repository Interfaces"]
+    end
+
+    subgraph Infra["SchoolMaster.Infrastructure"]
+        RepoImpl["EF Core Repositories<br/>(global TenantId query filter)"]
+        Jobs["Hangfire Jobs<br/>(email notifications, invites)"]
+    end
+
+    PG[("🐘 PostgreSQL")]
+    Redis[("⚡ Redis<br/>cache + Hangfire storage")]
+    SMTP["✉️ SMTP (MailKit)"]
+
+    Client -->|"HTTPS + JWT + X-Tenant-Subdomain"| MW
+    MW --> Ctrl
+    Ctrl --> Val --> Svc
+    Svc --> Repo --> RepoImpl --> PG
+    Svc --> Evt --> Jobs
+    Jobs --> Redis
+    Jobs --> SMTP
+    Svc -.-> Redis
+    Ctrl -->|"BaseResponse&lt;T&gt;"| Client
+```
 
 - **Controllers** (Api project) handle HTTP requests, headers, and routing.
 - **Services** (Application project) contain all the core business logic.
 - **Repositories** (Application/Infrastructure projects) abstract the Entity Framework Core data access and database operations.
+- **Middleware** resolves the tenant from `X-Tenant-Subdomain` before any handler runs, so every downstream query is automatically tenant-scoped.
+- **Domain events** decouple side effects (e.g. absence emails) from the request/response path — the caller never waits on SMTP.
 
 ---
 
@@ -278,6 +333,8 @@ X-Tenant-Subdomain: susie.academy.edu
 
 #### **[Roadmap]** Proposed Bulk Import Students (CSV)
 
+> ℹ️ Bulk enrollment **is already implemented** at `POST /api/v1/students/bulk` and `POST /api/v1/staff/bulk` — those endpoints accept a **JSON array** and return partial-success results. The CSV/multipart variant below is the planned upload-a-spreadsheet flow and is not yet built.
+
 ```http
 POST /api/v1/students/bulk-import
 Content-Type: multipart/form-data
@@ -323,6 +380,39 @@ classId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 
 ---
 
+### Getting Started
+
+**First time here? Start with this.**
+
+SchoolMaster is multi-tenant, so nothing works until a school exists and its admin is verified. You can follow the whole flow against the [live API](https://schoolmaster-production.up.railway.app/swagger) — no local setup needed — or spin it up locally first with the [Quick Start](#quick-start-docker-migrations--testing) below.
+
+Two rules that explain most 401/404 responses:
+
+1. Every tenant-scoped request needs **both** the `Authorization: Bearer <token>` header **and** the `X-Tenant-Subdomain` header.
+2. In `Development`, the OTP is always `000000` — no inbox required.
+
+#### The happy path
+
+| # | Step | Call | Who |
+|---|---|---|---|
+| 1 | Register the school and its admin | `POST /api/v1/onboarding/tenants` | Public |
+| 2 | Verify the admin email with the OTP | `POST /api/v1/onboarding/verify-email` | Public |
+| 3 | Log in — returns JWT + refresh token | `POST /api/v1/auth/login` | Public |
+| 4 | Create an academic year | `POST /api/v1/academic/years` | Admin |
+| 5 | Create a term inside that year | `POST /api/v1/academic/terms` | Admin |
+| 6 | Create a class and a subject | `POST /api/v1/academic/classes`, `POST /api/v1/academic/subjects` | Admin |
+| 7 | Invite a teacher (they verify via email) | `POST /api/v1/staff` | Admin |
+| 8 | Add a timetable period to the class | `POST /api/v1/academic/classes/{classId}/periods` | Admin |
+| 9 | Enroll a student into the class | `POST /api/v1/students` | Admin |
+| 10 | Mark attendance for the class | `POST /api/v1/attendance` | Teacher |
+| 11 | Read back the student's attendance | `GET /api/v1/attendance/student/{id}` | Admin, Teacher, Parent |
+
+Marking a student **Absent** in step 10 queues a Hangfire job that emails the guardian — the response returns immediately with `notificationsQueued`.
+
+See [Request & Response Examples](#phase-1-request--response-examples) for full payloads on steps 9 and 10.
+
+---
+
 ### Quick Start (Docker, Migrations & Testing)
 
 **1. Run the application with Docker**
@@ -354,7 +444,12 @@ The repository includes a comprehensive test suite (xUnit + Moq) covering unit t
 dotnet test
 ```
 
-**4. Running Load Tests**
+---
+
+### Advanced
+
+#### Load Testing
+
 A user lifecycle simulation load test is configured in `SchoolMaster.LoadTests` using **NBomber**.
 The load test scenario automatically:
 
