@@ -1,4 +1,3 @@
-using Hangfire;
 using Hangfire.Common;
 using Hangfire.States;
 using Microsoft.Extensions.Options;
@@ -18,9 +17,9 @@ public class OnboardingServiceTests
 {
     private readonly Mock<ITenantRepository> _tenantRepo = new();
     private readonly Mock<IUserRepository> _userRepo = new();
-    private readonly Mock<IBackgroundJobClient> _backgroundJobClient = new();
     private readonly Mock<ICurrentTenant> _currentTenant = new();
     private readonly Mock<IOtpService> _otpService = new();
+    private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private readonly IOptions<EmailVerificationOptions> _emailOptions =
         Options.Create(new EmailVerificationOptions { ExpirationInMinutes = 15 });
@@ -29,9 +28,9 @@ public class OnboardingServiceTests
         _tenantRepo.Object,
         _userRepo.Object,
         _emailOptions,
-        _backgroundJobClient.Object,
         _currentTenant.Object,
-        _otpService.Object);
+        _otpService.Object,
+        _unitOfWork.Object);
 
     private static OnboardTenantRequest MakeValidRequest(string? email = null, string? subdomain = null) => new()
     {
@@ -194,6 +193,13 @@ public class OnboardingServiceTests
             {
                 Email = user.Email, OtpToken = "wrong"
             }));
+
+        // A genuine wrong guess against a live OTP must be counted AND persisted. The method throws,
+        // which stops UnitOfWorkFilter from committing, so the service must save explicitly — otherwise
+        // the attempt cap never advances and the OTP can be brute-forced.
+        Assert.Equal(1, user.OtpAttemptCount);
+        _userRepo.Verify(r => r.UpdateUserAsync(user), Times.Once);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
@@ -216,6 +222,11 @@ public class OnboardingServiceTests
             {
                 Email = user.Email, OtpToken = "1234"
             }));
+
+        // An expired OTP is not a "genuine wrong guess", so it must not count toward the lockout
+        // or trigger a persist.
+        Assert.Equal(0, user.OtpAttemptCount);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
     }
 
     // -------------------------------------------------------------------------
@@ -245,14 +256,18 @@ public class OnboardingServiceTests
     }
 
     [Fact]
-    public async Task ResendVerificationOtpAsync_WithEmptyTenantId_ReturnsSilentSuccessWithoutDbLookup()
+    public async Task ResendVerificationOtpAsync_WithEmptyTenantId_ReturnsSilentSuccess()
     {
+        // With no resolved tenant the global query filter scopes the lookup to TenantId == Guid.Empty,
+        // which matches nobody, so the flow returns the same silent success (no account enumeration)
+        // and never issues a new OTP.
         _currentTenant.SetupGet(t => t.Id).Returns(Guid.Empty);
+        _userRepo.Setup(r => r.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
 
         var result = await CreateSut().ResendVerificationOtpAsync(new ResendOtpRequest { Email = "a@b.com" });
 
         Assert.True(result.Success);
-        _userRepo.Verify(r => r.GetUserByEmailAsync(It.IsAny<string>()), Times.Never);
+        _userRepo.Verify(r => r.UpdateUserAsync(It.IsAny<User>()), Times.Never);
     }
 
     [Fact]

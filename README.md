@@ -7,6 +7,18 @@
 
 ---
 
+## 🌐 Live API
+
+| | |
+|---|---|
+| **Base URL** | `https://schoolmaster-production.up.railway.app` |
+| **API docs (Swagger)** | <https://schoolmaster-production.up.railway.app/swagger> |
+| **Health check** | `https://schoolmaster-production.up.railway.app/health/ready` |
+
+> All endpoint paths below are relative to the base URL. Tenant-scoped endpoints require a valid JWT **and** the `X-Tenant-Subdomain` header. Start at `POST /api/v1/onboarding/tenants` to register a school and its admin, then verify the admin email with the OTP before logging in.
+
+---
+
 ### Phase 1 Features
 
 - **Multi-Role Authentication** — JWT + refresh token auth with rotation, BCrypt password hashing, OTP email verification, and password reset flow. Supports Admin, Teacher, Student, Parent, and Staff roles.
@@ -63,7 +75,8 @@
 
 ### Architecture
 
-The application follows an N-Tier architecture (Controller → Service → Repository → Database). 
+The application follows an N-Tier architecture (Controller → Service → Repository → Database).
+
 - **Controllers** (Api project) handle HTTP requests, headers, and routing.
 - **Services** (Application project) contain all the core business logic.
 - **Repositories** (Application/Infrastructure projects) abstract the Entity Framework Core data access and database operations.
@@ -111,7 +124,7 @@ Base URL: `/api/v1/students`
 | Method | Endpoint | Description | Roles |
 |---|---|---|---|
 | `POST` | `/api/v1/students` | Enroll a new student | Admin |
-| `POST` | `/api/v1/students/bulk-import` | **[Roadmap]** Bulk enroll from CSV | Admin |
+| `POST` | `/api/v1/students/bulk` | Bulk enroll students (JSON array, partial success) | Admin |
 | `GET` | `/api/v1/students` | **[Roadmap]** List all students (paginated, filterable) | Admin, Teacher |
 | `GET` | `/api/v1/students/{id}` | **[Roadmap]** Get student profile | Admin, Teacher, Parent (own child) |
 | `PUT` | `/api/v1/students/{id}` | **[Roadmap]** Update student profile | Admin |
@@ -129,6 +142,7 @@ Base URL: `/api/v1/staff`
 |---|---|---|---|
 | `POST` | `/api/v1/staff` | Create staff profile and send invitation | Admin |
 | `POST` | `/api/v1/staff/resend-invitation` | Resend verification email to pending staff | Admin |
+| `POST` | `/api/v1/staff/bulk` | Bulk enroll staff (JSON array, partial success) | Admin |
 | `GET` | `/api/v1/staff` | **[Roadmap]** List all staff | Admin |
 | `GET` | `/api/v1/staff/{id}` | **[Roadmap]** Get staff profile | Admin, Teacher (own) |
 | `PUT` | `/api/v1/staff/{id}` | **[Roadmap]** Update staff profile | Admin |
@@ -204,6 +218,7 @@ X-Tenant-Subdomain: susie.academy.edu
 ```
 
 **Response** `200 OK`:
+
 ```json
 {
   "success": true,
@@ -243,6 +258,7 @@ X-Tenant-Subdomain: susie.academy.edu
 ```
 
 **Response** `200 OK`:
+
 ```json
 {
   "success": true,
@@ -272,6 +288,7 @@ classId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 ```
 
 **Response** `200 OK`:
+
 ```json
 {
   "success": true,
@@ -310,40 +327,46 @@ classId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 
 **1. Run the application with Docker**
 The application is fully dockerized with a PostgreSQL database and Redis cache. To start everything:
+
 ```bash
 docker compose up --build -d
 ```
+
 *The API will be available at `http://localhost:7001`.*
 
 **2. Database Migrations**
 To create a new EF Core migration after changing your entities:
+
 ```bash
 dotnet ef migrations add <MigrationName>
 ```
 
 To apply the migrations, simply rebuild and restart the API container (the application automatically applies pending migrations on startup):
+
 ```bash
 docker compose up --build -d api
 ```
 
 **3. Running Tests**
 The repository includes a comprehensive test suite (xUnit + Moq) covering unit tests and database-isolated integration tests (using Microsoft's `WebApplicationFactory` and real PostgreSQL inside `Testcontainers`):
+
 ```bash
 dotnet test
 ```
 
 **4. Running Load Tests**
-A user lifecycle simulation load test is configured in `SchoolMaster.LoadTests` using **NBomber**. 
+A user lifecycle simulation load test is configured in `SchoolMaster.LoadTests` using **NBomber**.
 The load test scenario automatically:
+
 - Seeds 5 unique school tenants (with classrooms, subjects, teachers, and students).
 - Automates verification codes (bypassed with the `"000000"` dev OTP token).
 - Simulates concurrent logins (Admin & Teacher) and marks daily student attendance with dynamic status distribution (Present, Absent, Late, Excused).
 
 To execute the load tests against a running instance of the API (`http://localhost:7001`):
+
 ```bash
 dotnet run --project SchoolMaster.LoadTests/SchoolMaster.LoadTests.csproj
 ```
-
 
 ---
 
@@ -361,11 +384,11 @@ dotnet run --project SchoolMaster.LoadTests/SchoolMaster.LoadTests.csproj
 - [x] Unit and integration tests with Testcontainers
 - [x] Docker + docker-compose with PostgreSQL and Redis
 - [x] GitHub Actions CI/CD
-- [ ] Audit log — queryable history of all write operations
+- [x] Audit log — queryable history of all write operations
 - [x] Timetable conflict detection — automatic validation before saving
 - [ ] Attendance analytics — heatmap view per class per week
 - [ ] Parent mobile push notifications via FCM (Firebase)
 - [ ] CSV export for all attendance reports
-- [ ] Soft delete — deactivate students/staff instead of hard delete
+- [x] Soft delete — deactivate students/staff instead of hard delete
 - [x] API versioning — /api/v1/ prefix enforced from day one
-- [ ] Bulk Enrollment of Students/Staff
+- [x] Bulk Enrollment of Students/Staff
