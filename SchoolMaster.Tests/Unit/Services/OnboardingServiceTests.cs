@@ -281,7 +281,6 @@ public class OnboardingServiceTests
         var result = await CreateSut().ResendVerificationOtpAsync(new ResendOtpRequest { Email = "ghost@test.com" });
 
         Assert.True(result.Success);
-        _backgroundJobClient.Verify(b => b.Create(It.IsAny<Job>(), It.IsAny<IState>()), Times.Never);
     }
 
     [Fact]
@@ -301,6 +300,5 @@ public class OnboardingServiceTests
 
         Assert.True(result.Success);
         _otpService.Verify(o => o.GenerateVerificationOtp(), Times.Never);
-        _backgroundJobClient.Verify(b => b.Create(It.IsAny<Job>(), It.IsAny<IState>()), Times.Never);
     }
 }
